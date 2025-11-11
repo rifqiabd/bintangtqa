@@ -10,6 +10,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { GraduationCap, MapPin } from "lucide-react";
+import { z } from "zod";
+
+// Validation schemas
+const loginSchema = z.object({
+  email: z.string().trim().email("Format email tidak valid").max(255, "Email terlalu panjang"),
+  password: z.string().min(8, "Password minimal 8 karakter").max(72, "Password terlalu panjang"),
+});
+
+const registrationSchema = z.object({
+  fullName: z.string().trim().min(2, "Nama minimal 2 karakter").max(100, "Nama terlalu panjang"),
+  email: z.string().trim().email("Format email tidak valid").max(255, "Email terlalu panjang"),
+  phone: z.string().trim().regex(/^[0-9]{10,15}$/, "Nomor HP harus 10-15 digit angka"),
+  password: z.string().min(8, "Password minimal 8 karakter").max(72, "Password terlalu panjang"),
+  address: z.string().max(500, "Alamat terlalu panjang").optional(),
+  experience: z.string().max(2000, "Pengalaman terlalu panjang").optional(),
+});
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -66,32 +82,39 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Validate input
+      const validatedData = loginSchema.parse({ email, password });
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: validatedData.email,
+        password: validatedData.password,
       });
 
       if (error) throw error;
 
-      // Get user profile to determine role
-      const { data: profile } = await supabase
-        .from("profiles")
+      // Get user role from user_roles table
+      const { data: userRole } = await supabase
+        .from("user_roles")
         .select("role")
-        .eq("id", data.user.id)
+        .eq("user_id", data.user.id)
         .single();
 
       toast.success("Login berhasil!");
       
       // Redirect based on role
-      if (profile?.role === "admin") {
+      if (userRole?.role === "admin") {
         navigate("/admin");
-      } else if (profile?.role === "tutor") {
+      } else if (userRole?.role === "tutor") {
         navigate("/tutor");
       } else {
         navigate("/student");
       }
     } catch (error: any) {
-      toast.error(error.message || "Login gagal");
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error(error.message || "Login gagal");
+      }
     } finally {
       setLoading(false);
     }
@@ -102,10 +125,20 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Validate input
+      const validatedData = registrationSchema.parse({
+        fullName,
+        email,
+        phone,
+        password,
+        address: address || undefined,
+        experience: experience || undefined,
+      });
+
       // Register user
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
+        email: validatedData.email,
+        password: validatedData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -114,27 +147,34 @@ const Auth = () => {
       if (authError) throw authError;
       if (!authData.user) throw new Error("User creation failed");
 
-      // Create profile
+      // Create profile (without role)
       const { error: profileError } = await supabase.from("profiles").insert({
         id: authData.user.id,
-        full_name: fullName,
-        email,
-        phone,
-        address,
+        full_name: validatedData.fullName,
+        email: validatedData.email,
+        phone: validatedData.phone,
+        address: validatedData.address,
         latitude: location?.lat,
         longitude: location?.lng,
-        role: role,
       });
 
       if (profileError) throw profileError;
 
+      // Create user role in user_roles table
+      const { error: roleError } = await supabase.from("user_roles").insert({
+        user_id: authData.user.id,
+        role: role,
+      });
+
+      if (roleError) throw roleError;
+
       // If tutor, create tutor details
       if (role === "tutor") {
-        const { error: tutorError } = await supabase.from("tutor_details").insert([{
+        const { error: tutorError } = await supabase.from("tutor_details").insert({
           tutor_id: authData.user.id,
           subjects: subjects as any,
-          experience,
-        }]);
+          experience: validatedData.experience,
+        });
 
         if (tutorError) throw tutorError;
       }
@@ -142,7 +182,11 @@ const Auth = () => {
       toast.success("Registrasi berhasil! Silakan login.");
       setIsLogin(true);
     } catch (error: any) {
-      toast.error(error.message || "Registrasi gagal");
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error(error.message || "Registrasi gagal");
+      }
     } finally {
       setLoading(false);
     }

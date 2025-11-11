@@ -26,13 +26,13 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
         return;
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
+      const { data: userRole } = await supabase
+        .from("user_roles")
         .select("role")
-        .eq("id", session.user.id)
+        .eq("user_id", session.user.id)
         .single();
 
-      if (!profile || !allowedRoles.includes(profile.role)) {
+      if (!userRole || !allowedRoles.includes(userRole.role)) {
         navigate("/");
         return;
       }

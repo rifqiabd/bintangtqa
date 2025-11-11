@@ -16,15 +16,15 @@ const AdminDashboard = () => {
   }, []);
 
   const loadStats = async () => {
-    // Get total students
+    // Get total students from user_roles
     const { count: totalStudents } = await supabase
-      .from("profiles")
+      .from("user_roles")
       .select("*", { count: "exact", head: true })
       .eq("role", "student");
 
-    // Get total tutors
+    // Get total tutors from user_roles
     const { count: totalTutors } = await supabase
-      .from("profiles")
+      .from("user_roles")
       .select("*", { count: "exact", head: true })
       .eq("role", "tutor");
 

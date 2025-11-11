@@ -35,9 +35,9 @@ const StudentDashboard = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get total tutors
+    // Get total tutors from user_roles
     const { count: totalTutors } = await supabase
-      .from("profiles")
+      .from("user_roles")
       .select("*", { count: "exact", head: true })
       .eq("role", "tutor");
 

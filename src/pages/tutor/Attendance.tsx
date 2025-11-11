@@ -8,6 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { MapPin, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { z } from "zod";
+
+// Validation schema for notes
+const notesSchema = z.object({
+  notes: z.string().max(1000, "Catatan maksimal 1000 karakter").optional(),
+});
 
 const TutorAttendance = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -77,6 +83,9 @@ const TutorAttendance = () => {
 
     setLoading(true);
     try {
+      // Validate notes input
+      const validatedData = notesSchema.parse({ notes });
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -84,7 +93,7 @@ const TutorAttendance = () => {
         tutor_id: user.id,
         check_in_latitude: location.lat,
         check_in_longitude: location.lng,
-        notes,
+        notes: validatedData.notes || null,
       });
 
       if (error) throw error;
@@ -94,7 +103,11 @@ const TutorAttendance = () => {
       loadActiveSession();
       loadRecentAttendance();
     } catch (error: any) {
-      toast.error(error.message || "Check-in gagal");
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error(error.message || "Check-in gagal");
+      }
     } finally {
       setLoading(false);
     }

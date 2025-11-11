@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Star, Search } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+
+// Validation schema for search query
+const searchSchema = z.object({
+  query: z.string().max(200, "Pencarian terlalu panjang"),
+});
 
 interface TutorWithDistance {
   id: string;
@@ -51,7 +57,20 @@ const FindTutors = () => {
   const loadNearbyTutors = async (myLat: number, myLng: number) => {
     setLoading(true);
     try {
-      // Get all tutors with their details
+      // Get all tutor user_ids from user_roles
+      const { data: tutorRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "tutor");
+
+      if (!tutorRoles || tutorRoles.length === 0) {
+        setTutors([]);
+        return;
+      }
+
+      const tutorIds = tutorRoles.map(r => r.user_id);
+
+      // Get tutor profiles
       const { data: tutorProfiles } = await supabase
         .from("profiles")
         .select(`
@@ -62,7 +81,7 @@ const FindTutors = () => {
           latitude,
           longitude
         `)
-        .eq("role", "tutor")
+        .in("id", tutorIds)
         .not("latitude", "is", null)
         .not("longitude", "is", null);
 
@@ -121,10 +140,18 @@ const FindTutors = () => {
     return (value * Math.PI) / 180;
   };
 
-  const filteredTutors = tutors.filter(tutor =>
-    tutor.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tutor.subjects.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredTutors = tutors.filter((tutor) => {
+    try {
+      // Validate and sanitize search query
+      const validatedQuery = searchSchema.parse({ query: searchQuery });
+      const query = validatedQuery.query.toLowerCase();
+      
+      return tutor.full_name.toLowerCase().includes(query) ||
+        tutor.subjects.some((subject) => subject.toLowerCase().includes(query));
+    } catch {
+      return true; // Return all tutors if validation fails
+    }
+  });
 
   const handleEnroll = async (tutorId: string) => {
     const { data: { user } } = await supabase.auth.getUser();

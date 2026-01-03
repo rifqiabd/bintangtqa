@@ -102,17 +102,17 @@ const Auth = () => {
       
       if (session?.user) {
         // Check if user has a role
-        const { data: userRole } = await supabase
+        const { data: userRoles } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", session.user.id)
-          .single();
+          .limit(1);
 
-        if (userRole) {
+        if (userRoles && userRoles.length > 0) {
           // User has role, redirect based on role
-          if (userRole.role === "admin") {
+          if (userRoles[0].role === "admin") {
             navigate("/admin");
-          } else if (userRole.role === "tutor") {
+          } else if (userRoles[0].role === "tutor") {
             navigate("/tutor");
           } else {
             navigate("/student");
@@ -139,9 +139,9 @@ const Auth = () => {
             .from("user_roles")
             .select("role")
             .eq("user_id", session.user.id)
-            .single();
+            .limit(1);
 
-          if (!roleCheck) {
+          if (!roleCheck || roleCheck.length === 0) {
             await supabase.from("user_roles").insert({
               user_id: session.user.id,
               role: "student",
@@ -173,18 +173,35 @@ const Auth = () => {
       if (error) throw error;
 
       // Get user role from user_roles table
-      const { data: userRole } = await supabase
+      const { data: userRoles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", data.user.id)
-        .single();
+        .limit(1);
+
+      // If no role exists, create as student by default
+      if (!userRoles || userRoles.length === 0) {
+        const { error: insertError } = await supabase.from("user_roles").insert({
+          user_id: data.user.id,
+          role: "student",
+        });
+        
+        if (!insertError) {
+          toast.success("Login berhasil!");
+          navigate("/student");
+        } else {
+          console.error("Error creating role:", insertError);
+          toast.error("Gagal membuat role user");
+        }
+        return;
+      }
 
       toast.success("Login berhasil!");
       
       // Redirect based on role
-      if (userRole?.role === "admin") {
+      if (userRoles[0].role === "admin") {
         navigate("/admin");
-      } else if (userRole?.role === "tutor") {
+      } else if (userRoles[0].role === "tutor") {
         navigate("/tutor");
       } else {
         navigate("/student");

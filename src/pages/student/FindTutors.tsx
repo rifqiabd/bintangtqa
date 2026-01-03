@@ -4,113 +4,134 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Star, Search } from "lucide-react";
+import { MapPin, Star, Search, User, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
-import { z } from "zod";
+import { useNavigate } from "react-router-dom";
 
-// Validation schema for search query
-const searchSchema = z.object({
-  query: z.string().max(200, "Pencarian terlalu panjang"),
-});
-
-interface TutorWithDistance {
+interface TutorData {
   id: string;
   full_name: string;
   phone: string;
+  email: string;
   address: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   subjects: string[];
   experience: string;
-  distance: number;
+  hourly_rate: number | null;
+  distance?: number;
 }
 
 const FindTutors = () => {
-  const [tutors, setTutors] = useState<TutorWithDistance[]>([]);
+  const navigate = useNavigate();
+  const [tutors, setTutors] = useState<TutorData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-  const loadMyLocation = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase
+  useEffect(() => {
+    loadTutors();
+  }, []);
+
+  const loadTutors = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("User tidak ditemukan");
+        return;
+      }
+
+      // Get my location
+      const { data: myProfile } = await supabase
         .from("profiles")
         .select("latitude, longitude")
         .eq("id", user.id)
         .single();
-      
-      if (data?.latitude && data?.longitude) {
-        loadNearbyTutors(data.latitude, data.longitude);
-      } else {
-        toast.error("Lokasi Anda belum tersedia. Silakan update profil.");
-        setLoading(false);
-      }
-    }
-  };
 
-  const loadNearbyTutors = async (myLat: number, myLng: number) => {
-    setLoading(true);
-    try {
-      // Get all tutor user_ids from user_roles
-      const { data: tutorRoles } = await supabase
+      if (myProfile?.latitude && myProfile?.longitude) {
+        setMyLocation({ lat: myProfile.latitude, lng: myProfile.longitude });
+      }
+
+      // Get all tutors from user_roles
+      const { data: tutorRoles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
         .eq("role", "tutor");
 
+      if (rolesError) throw rolesError;
+
       if (!tutorRoles || tutorRoles.length === 0) {
         setTutors([]);
+        setLoading(false);
         return;
       }
 
       const tutorIds = tutorRoles.map(r => r.user_id);
 
       // Get tutor profiles
-      const { data: tutorProfiles } = await supabase
+      const { data: tutorProfiles, error: profilesError } = await supabase
         .from("profiles")
-        .select(`
-          id,
-          full_name,
-          phone,
-          address,
-          latitude,
-          longitude
-        `)
-        .in("id", tutorIds)
-        .not("latitude", "is", null)
-        .not("longitude", "is", null);
+        .select("id, full_name, phone, email, address, latitude, longitude")
+        .in("id", tutorIds);
 
-      if (!tutorProfiles) return;
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+      
+      console.log("Tutor profiles found:", tutorProfiles?.length);
+      
+      if (!tutorProfiles || tutorProfiles.length === 0) {
+        setTutors([]);
+        setLoading(false);
+        return;
+      }
 
       // Get tutor details
       const { data: tutorDetails } = await supabase
         .from("tutor_details")
-        .select("tutor_id, subjects, experience")
+        .select("tutor_id, subjects, experience, hourly_rate")
         .in("tutor_id", tutorProfiles.map(t => t.id));
 
-      // Calculate distances and merge data
-      const tutorsWithDistance = tutorProfiles.map(tutor => {
-        const details = tutorDetails?.find(d => d.tutor_id === tutor.id);
-        const distance = calculateDistance(
-          myLat,
-          myLng,
-          tutor.latitude!,
-          tutor.longitude!
-        );
+      // Merge data and calculate distances
+      const allTutors = tutorProfiles.map(profile => {
+        const details = tutorDetails?.find(d => d.tutor_id === profile.id);
+        let distance = undefined;
+
+        if (myLocation && profile.latitude && profile.longitude) {
+          distance = calculateDistance(
+            myLocation.lat,
+            myLocation.lng,
+            profile.latitude,
+            profile.longitude
+          );
+        }
 
         return {
-          ...tutor,
+          id: profile.id,
+          full_name: profile.full_name || "Nama tidak tersedia",
+          phone: profile.phone || "-",
+          email: profile.email || "-",
+          address: profile.address || "Alamat tidak tersedia",
+          latitude: profile.latitude,
+          longitude: profile.longitude,
           subjects: details?.subjects || [],
           experience: details?.experience || "",
+          hourly_rate: details?.hourly_rate || null,
           distance,
-        } as TutorWithDistance;
+        };
       });
 
-      // Sort by distance and filter within 10km
-      const nearbyTutors = tutorsWithDistance
-        .filter(t => t.distance <= 10)
-        .sort((a, b) => a.distance - b.distance);
+      // Sort by distance if available
+      const sortedTutors = allTutors.sort((a, b) => {
+        if (a.distance !== undefined && b.distance !== undefined) {
+          return a.distance - b.distance;
+        }
+        return 0;
+      });
 
-      setTutors(nearbyTutors);
+      setTutors(sortedTutors);
     } catch (error) {
       console.error("Error loading tutors:", error);
       toast.error("Gagal memuat data tutor");
@@ -118,10 +139,6 @@ const FindTutors = () => {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    loadMyLocation();
-  }, []);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Earth radius in km
@@ -139,53 +156,91 @@ const FindTutors = () => {
   };
 
   const filteredTutors = tutors.filter((tutor) => {
-    try {
-      // Validate and sanitize search query
-      const validatedQuery = searchSchema.parse({ query: searchQuery });
-      const query = validatedQuery.query.toLowerCase();
-      
-      return tutor.full_name.toLowerCase().includes(query) ||
-        tutor.subjects.some((subject) => subject.toLowerCase().includes(query));
-    } catch {
-      return true; // Return all tutors if validation fails
-    }
+    const query = searchQuery.toLowerCase();
+    return (
+      tutor.full_name.toLowerCase().includes(query) ||
+      tutor.subjects.some((subject) => subject.toLowerCase().includes(query)) ||
+      tutor.address.toLowerCase().includes(query)
+    );
   });
 
-  const handleEnroll = async (tutorId: string) => {
+  const handleEnroll = async (tutorId: string, tutorName: string) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      toast.error("Silakan login terlebih dahulu");
+      return;
+    }
 
     try {
+      // Check if already enrolled
+      const { data: existing } = await supabase
+        .from("enrollments")
+        .select("id")
+        .eq("student_id", user.id)
+        .eq("tutor_id", tutorId)
+        .single();
+
+      if (existing) {
+        toast.error("Anda sudah terdaftar dengan tutor ini");
+        return;
+      }
+
       const { error } = await supabase.from("enrollments").insert({
         student_id: user.id,
         tutor_id: tutorId,
-        subject: "matematika", // You can add subject selection
+        subject: "matematika",
         status: "active",
       });
 
       if (error) throw error;
-      toast.success("Berhasil mendaftar dengan tutor!");
+      toast.success(`Berhasil mendaftar dengan ${tutorName}!`);
+      
+      // Refresh tutors
+      setTimeout(() => loadTutors(), 1000);
     } catch (error) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === "23505") {
-        toast.error("Anda sudah terdaftar dengan tutor ini");
-      } else {
-        toast.error("Gagal mendaftar");
-      }
+      console.error("Error enrolling:", error);
+      toast.error("Gagal mendaftar");
     }
   };
 
+  const formatSubject = (subject: string) => {
+    return subject.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Memuat data tutor...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Cari Tutor Terdekat</h1>
-        <p className="text-muted-foreground">Temukan tutor profesional di sekitar Anda</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold">Cari Tutor</h1>
+          <p className="text-muted-foreground">
+            {myLocation 
+              ? "Temukan tutor profesional terdekat dengan Anda" 
+              : "Temukan tutor profesional"}
+          </p>
+        </div>
+        {!myLocation && (
+          <Button variant="outline" onClick={() => navigate("/student/profile")}>
+            Set Lokasi
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Cari berdasarkan nama atau mata pelajaran..."
+            placeholder="Cari berdasarkan nama, mata pelajaran, atau lokasi..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -193,42 +248,74 @@ const FindTutors = () => {
         </div>
       </div>
 
-      {loading ? (
-        <p>Memuat data tutor...</p>
-      ) : filteredTutors.length === 0 ? (
+      {filteredTutors.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Tidak ada tutor dalam radius 10km</p>
+            <User className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Belum Ada Tutor</h3>
+            <p className="text-muted-foreground">
+              {searchQuery 
+                ? "Tidak ada tutor yang cocok dengan pencarian Anda" 
+                : "Belum ada tutor yang terdaftar di sistem"}
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredTutors.map((tutor) => (
             <Card key={tutor.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-xl">{tutor.full_name}</CardTitle>
-                    <CardDescription className="flex items-center gap-1 mt-1">
-                      <MapPin className="h-3 w-3" />
-                      {tutor.distance.toFixed(1)} km dari Anda
-                    </CardDescription>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <User className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg truncate">{tutor.full_name}</CardTitle>
+                      {tutor.distance !== undefined && (
+                        <CardDescription className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{tutor.distance.toFixed(1)} km</span>
+                        </CardDescription>
+                      )}
+                    </div>
                   </div>
-                  <Badge variant="secondary">{tutor.subjects.length} Mata Pelajaran</Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium mb-2">Mata Pelajaran:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {tutor.subjects.slice(0, 4).map((subject, idx) => (
-                      <Badge key={idx} variant="outline">
-                        {subject}
-                      </Badge>
-                    ))}
+              <CardContent className="space-y-3">
+                {tutor.subjects.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Mata Pelajaran:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {tutor.subjects.slice(0, 3).map((subject, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                          {formatSubject(subject)}
+                        </Badge>
+                      ))}
+                      {tutor.subjects.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{tutor.subjects.length - 3} lagi
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{tutor.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{tutor.email}</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span className="line-clamp-2">{tutor.address}</span>
                   </div>
                 </div>
+
                 {tutor.experience && (
                   <div>
                     <p className="text-sm font-medium mb-1">Pengalaman:</p>
@@ -237,14 +324,22 @@ const FindTutors = () => {
                     </p>
                   </div>
                 )}
-                <div className="flex gap-2">
-                  <Button onClick={() => handleEnroll(tutor.id)} className="flex-1">
-                    Daftar Sekarang
-                  </Button>
-                  <Button variant="outline" size="icon">
-                    <Star className="h-4 w-4" />
-                  </Button>
-                </div>
+
+                {tutor.hourly_rate && (
+                  <div className="pt-2 border-t">
+                    <p className="text-sm text-muted-foreground">Tarif per jam:</p>
+                    <p className="text-lg font-bold text-primary">
+                      Rp {tutor.hourly_rate.toLocaleString("id-ID")}
+                    </p>
+                  </div>
+                )}
+
+                <Button 
+                  onClick={() => handleEnroll(tutor.id, tutor.full_name)} 
+                  className="w-full"
+                >
+                  Daftar Sekarang
+                </Button>
               </CardContent>
             </Card>
           ))}

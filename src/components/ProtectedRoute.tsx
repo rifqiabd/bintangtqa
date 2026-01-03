@@ -22,13 +22,18 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
         return;
       }
 
-      const { data: userRole } = await supabase
+      const { data: userRoles, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", session.user.id)
-        .single();
+        .eq("user_id", session.user.id);
 
-      if (!userRole || !allowedRoles.includes(userRole.role)) {
+      if (error) {
+        console.error("Error fetching user role:", error);
+        navigate("/auth");
+        return;
+      }
+
+      if (!userRoles || userRoles.length === 0 || !allowedRoles.includes(userRoles[0].role)) {
         navigate("/");
         return;
       }

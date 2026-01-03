@@ -29,11 +29,6 @@ const FindTutors = () => {
   const [tutors, setTutors] = useState<TutorWithDistance[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
-
-  useEffect(() => {
-    loadMyLocation();
-  }, []);
 
   const loadMyLocation = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -45,7 +40,6 @@ const FindTutors = () => {
         .single();
       
       if (data?.latitude && data?.longitude) {
-        setMyLocation({ lat: data.latitude, lng: data.longitude });
         loadNearbyTutors(data.latitude, data.longitude);
       } else {
         toast.error("Lokasi Anda belum tersedia. Silakan update profil.");
@@ -125,6 +119,10 @@ const FindTutors = () => {
     }
   };
 
+  useEffect(() => {
+    loadMyLocation();
+  }, []);
+
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Earth radius in km
     const dLat = toRad(lat2 - lat1);
@@ -167,8 +165,8 @@ const FindTutors = () => {
 
       if (error) throw error;
       toast.success("Berhasil mendaftar dengan tutor!");
-    } catch (error: any) {
-      if (error.code === "23505") {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === "23505") {
         toast.error("Anda sudah terdaftar dengan tutor ini");
       } else {
         toast.error("Gagal mendaftar");

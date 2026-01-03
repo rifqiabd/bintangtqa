@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { GraduationCap, MapPin, Chrome } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -88,8 +89,8 @@ const Auth = () => {
         },
       });
       if (error) throw error;
-    } catch (error: any) {
-      toast.error(error.message || "Login dengan Google gagal");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Login dengan Google gagal");
       setLoading(false);
     }
   };
@@ -188,11 +189,11 @@ const Auth = () => {
       } else {
         navigate("/student");
       }
-    } catch (error: any) {
+    } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       } else {
-        toast.error(error.message || "Login gagal");
+        toast.error(error instanceof Error ? error.message : "Login gagal");
       }
     } finally {
       setLoading(false);
@@ -251,7 +252,7 @@ const Auth = () => {
       if (role === "tutor") {
         const { error: tutorError } = await supabase.from("tutor_details").insert({
           tutor_id: authData.user.id,
-          subjects: subjects as any,
+          subjects: subjects as Database["public"]["Enums"]["subject_area"][],
           experience: validatedData.experience,
         });
 
@@ -260,7 +261,7 @@ const Auth = () => {
 
       toast.success("Registrasi berhasil! Silakan login.");
       setIsLogin(true);
-    } catch (error: any) {
+    } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       } else {

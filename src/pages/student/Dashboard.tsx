@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<{ full_name: string; email: string } | null>(null);
   const [stats, setStats] = useState({
     totalTutors: 0,
     myTutors: 0,

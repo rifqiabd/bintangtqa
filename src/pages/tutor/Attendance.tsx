@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -15,12 +14,20 @@ const notesSchema = z.object({
   notes: z.string().max(1000, "Catatan maksimal 1000 karakter").optional(),
 });
 
+type AttendanceRecord = {
+  id: string;
+  check_in_time: string | null;
+  check_out_time: string | null;
+  notes: string | null;
+  student_id: string | null;
+};
+
 const TutorAttendance = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
-  const [activeSession, setActiveSession] = useState<any>(null);
-  const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
+  const [activeSession, setActiveSession] = useState<AttendanceRecord | null>(null);
+  const [recentAttendance, setRecentAttendance] = useState<AttendanceRecord[]>([]);
 
   useEffect(() => {
     loadActiveSession();
@@ -102,11 +109,11 @@ const TutorAttendance = () => {
       setNotes("");
       loadActiveSession();
       loadRecentAttendance();
-    } catch (error: any) {
+    } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       } else {
-        toast.error(error.message || "Check-in gagal");
+        toast.error(error instanceof Error ? error.message : "Check-in gagal");
       }
     } finally {
       setLoading(false);
@@ -132,8 +139,8 @@ const TutorAttendance = () => {
       toast.success("Check-out berhasil!");
       setActiveSession(null);
       loadRecentAttendance();
-    } catch (error: any) {
-      toast.error(error.message || "Check-out gagal");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Check-out gagal");
     } finally {
       setLoading(false);
     }

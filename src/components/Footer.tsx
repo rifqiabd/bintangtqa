@@ -1,66 +1,96 @@
-import { GraduationCap, Mail, Phone, MapPin } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { BookOpen, Mail, Phone, MapPin, Instagram, Facebook, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Footer = () => {
+  const handleWhatsApp = () => {
+    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bimbel%20SamuraY", "_blank");
+  };
+
   return (
     <footer id="contact" className="bg-secondary/50 border-t border-border">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <GraduationCap className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold">EduMatch</span>
+              <BookOpen className="h-8 w-8 text-primary" />
+              <span className="text-xl font-bold">Bimbel SamuraY</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Platform pembelajaran privat yang menghubungkan siswa dengan tutor profesional terdekat.
+              Bimbingan Belajar yang menyediakan jasa Les Privat (Guru Datang ke Rumah Siswa) untuk TK, SD, SMP dan SMA.
             </p>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-4">Navigasi</h3>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#home" className="text-muted-foreground hover:text-primary">Beranda</a></li>
-              <li><a href="#programs" className="text-muted-foreground hover:text-primary">Program</a></li>
-              <li><a href="#tutors" className="text-muted-foreground hover:text-primary">Tutor</a></li>
-              <li><a href="#contact" className="text-muted-foreground hover:text-primary">Kontak</a></li>
+            <h3 className="font-semibold mb-4">Area Jangkauan</h3>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>Kota Pekalongan</li>
+              <li>Batang Kota</li>
+              <li>Wiradesa</li>
+              <li>Kedungwuni</li>
+              <li>Tegal</li>
+              <li>Brebes</li>
             </ul>
           </div>
 
           <div>
             <h3 className="font-semibold mb-4">Kontak</h3>
             <ul className="space-y-3 text-sm">
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <Mail className="h-4 w-4" />
-                info@edumatch.com
+              <li className="flex items-start gap-2 text-muted-foreground">
+                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>Jl. Sulawesi Gg. 3 No. 41 Kergon, Kota Pekalongan (Belakang Masjid An Nur)</span>
               </li>
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="h-4 w-4" />
-                +62 812-3456-7890
-              </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                Jakarta, Indonesia
+                0853-2895-5589
               </li>
             </ul>
+            <Button 
+              onClick={handleWhatsApp}
+              className="mt-4 gap-2 bg-green-600 hover:bg-green-700"
+              size="sm"
+            >
+              <Phone className="h-4 w-4" />
+              Chat WhatsApp
+            </Button>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-4">Newsletter</h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              Dapatkan update program dan tips belajar terbaru
-            </p>
-            <div className="flex gap-2">
-              <Input placeholder="Email Anda" className="text-sm" />
-              <Button size="sm" className="bg-primary hover:bg-primary/90">
-                Kirim
-              </Button>
+            <h3 className="font-semibold mb-4">Ikuti Kami</h3>
+            <div className="flex gap-3">
+              <a 
+                href="https://www.instagram.com/bimbelsamuray_official/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+              >
+                <Instagram className="h-5 w-5 text-primary" />
+              </a>
+              <a 
+                href="https://www.facebook.com/privatbimbelsamuray/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+              >
+                <Facebook className="h-5 w-5 text-primary" />
+              </a>
+              <a 
+                href="https://www.youtube.com/channel/UCazL9Y_7hULA-UNgGJTUYXw" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+              >
+                <Youtube className="h-5 w-5 text-primary" />
+              </a>
+            </div>
+            <div className="mt-4 text-sm text-muted-foreground">
+              <p>@bimbelsamuray_official</p>
+              <p>@BBS_PKL (TikTok)</p>
             </div>
           </div>
         </div>
 
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>© 2024 EduMatch. All rights reserved.</p>
+          <p>© 2024 Bimbel SamuraY. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -1,8 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Users, GraduationCap, Target, Home } from "lucide-react";
+import { Baby, BookOpen, Users, GraduationCap } from "lucide-react";
 
 const programs = [
+  {
+    icon: Baby,
+    title: "Privat TK",
+    description: "Pembelajaran menyenangkan untuk anak usia dini dengan metode bermain sambil belajar",
+    color: "text-pink-500",
+    bgColor: "bg-pink-50"
+  },
   {
     icon: BookOpen,
     title: "Privat SD",
@@ -13,45 +20,35 @@ const programs = [
   {
     icon: Users,
     title: "Privat SMP",
-    description: "Persiapan ujian dan pendalaman materi untuk siswa SMP",
+    description: "Persiapan ujian dan pendalaman materi untuk siswa SMP kelas 7-9",
     color: "text-green-500",
     bgColor: "bg-green-50"
   },
   {
     icon: GraduationCap,
     title: "Privat SMA",
-    description: "Pembelajaran intensif untuk siswa SMA dengan fokus ke universitas",
+    description: "Pembelajaran intensif untuk siswa SMA dengan fokus persiapan ujian",
     color: "text-purple-500",
     bgColor: "bg-purple-50"
-  },
-  {
-    icon: Target,
-    title: "Persiapan UTBK",
-    description: "Program khusus untuk persiapan UTBK dan masuk PTN favorit",
-    color: "text-orange-500",
-    bgColor: "bg-orange-50"
-  },
-  {
-    icon: Home,
-    title: "Homeschooling",
-    description: "Kurikulum lengkap untuk pembelajaran di rumah yang terstruktur",
-    color: "text-pink-500",
-    bgColor: "bg-pink-50"
   }
 ];
 
 const Programs = () => {
+  const handleWhatsApp = () => {
+    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bimbel%20SamuraY,%20saya%20ingin%20bertanya%20tentang%20program%20belajar", "_blank");
+  };
+
   return (
     <section id="programs" className="py-16 lg:py-24 bg-secondary/30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12 space-y-4">
           <h2 className="text-3xl sm:text-4xl font-bold">Program Pembelajaran</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Pilih program yang sesuai dengan kebutuhan belajar Anda
+            Menyediakan pengajar privat untuk semua jenjang pendidikan
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {programs.map((program, index) => {
             const Icon = program.icon;
             return (
@@ -69,8 +66,8 @@ const Programs = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button variant="outline" className="w-full">
-                    Lihat Detail
+                  <Button variant="outline" className="w-full" onClick={handleWhatsApp}>
+                    Tanya Dulu
                   </Button>
                 </CardContent>
               </Card>

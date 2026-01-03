@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { GraduationCap, MapPin } from "lucide-react";
+import { GraduationCap, MapPin, Chrome } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { z } from "zod";
 
 // Validation schemas
@@ -76,6 +77,84 @@ const Auth = () => {
       );
     }
   }, []);
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      toast.error(error.message || "Login dengan Google gagal");
+      setLoading(false);
+    }
+  };
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const handleAuthCallback = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        // Check if user has a role
+        const { data: userRole } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+
+        if (userRole) {
+          // User has role, redirect based on role
+          if (userRole.role === "admin") {
+            navigate("/admin");
+          } else if (userRole.role === "tutor") {
+            navigate("/tutor");
+          } else {
+            navigate("/student");
+          }
+        } else {
+          // New Google user, create profile and role
+          const { data: existingProfile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", session.user.id)
+            .single();
+
+          if (!existingProfile) {
+            await supabase.from("profiles").insert({
+              id: session.user.id,
+              full_name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
+              email: session.user.email!,
+              phone: session.user.user_metadata?.phone || "0000000000",
+            });
+          }
+
+          // Check if role exists, if not create as student
+          const { data: roleCheck } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .single();
+
+          if (!roleCheck) {
+            await supabase.from("user_roles").insert({
+              user_id: session.user.id,
+              role: "student",
+            });
+          }
+
+          toast.success("Login berhasil!");
+          navigate("/student");
+        }
+      }
+    };
+
+    handleAuthCallback();
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,7 +279,7 @@ const Auth = () => {
             <GraduationCap className="h-12 w-12 text-primary" />
           </div>
           <CardTitle className="text-2xl">
-            {isLogin ? "Masuk ke EduMatch" : "Daftar di EduMatch"}
+            {isLogin ? "Masuk ke Bimbel Samuray" : "Daftar di Bimbel Samuray"}
           </CardTitle>
           <CardDescription>
             {isLogin
@@ -244,6 +323,24 @@ const Auth = () => {
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Memproses..." : "Masuk"}
+                </Button>
+
+                <div className="relative my-4">
+                  <Separator />
+                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                    atau
+                  </span>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                >
+                  <Chrome className="mr-2 h-4 w-4" />
+                  Masuk dengan Google
                 </Button>
               </form>
             </TabsContent>

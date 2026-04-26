@@ -32,7 +32,9 @@ const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onM
     { title: "Siswa Saya", url: "/tutor/students", icon: Users },
     { title: "Absensi", url: "/tutor/attendance", icon: Calendar },
     { title: "Profil", url: "/tutor/profile", icon: User },
-  ] : [];
+  ] : [
+    { title: "Status Pendaftaran", url: "/tutor/pending", icon: Home },
+  ];
 
   const studentItems = [
     { title: "Dashboard", url: "/student", icon: Home },

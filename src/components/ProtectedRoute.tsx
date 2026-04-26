@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
 
@@ -50,22 +51,30 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
         return;
       }
 
-      if (!allowedRoles.includes(userRoles[0].role)) {
-        console.log("[ProtectedRoute] Role not allowed:", userRoles[0].role);
+      const userRole = userRoles[0].role;
+
+      if (!allowedRoles.includes(userRole)) {
+        console.log("[ProtectedRoute] Role not allowed:", userRole);
         navigate("/");
         return;
       }
 
       // Check tutor approval status
-      if (userRoles[0].role === "tutor") {
-        const { data: tutorDetails } = await supabase
+      const isPendingPath = location.pathname === "/tutor/pending" || location.pathname === "/tutor/resubmit";
+      
+      if (userRole === "tutor" && !isPendingPath) {
+        const { data: tutorDetails, error: tutorError } = await supabase
           .from("tutor_details")
           .select("is_approved")
           .eq("tutor_id", session.user.id)
-          .single();
+          .maybeSingle();
 
-        if (tutorDetails && !tutorDetails.is_approved) {
-          console.log("[ProtectedRoute] Tutor not approved, redirecting to /tutor/pending");
+        if (tutorError) {
+          console.error("[ProtectedRoute] Error fetching tutor details:", tutorError);
+        }
+
+        if (!tutorDetails || !tutorDetails.is_approved) {
+          console.log("[ProtectedRoute] Tutor not approved or no details, redirecting to /tutor/pending");
           navigate("/tutor/pending");
           return;
         }
@@ -83,7 +92,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
   useEffect(() => {
     checkAuth();
-  }, [allowedRoles, navigate]);
+  }, [allowedRoles, navigate, location.pathname]);
 
   if (loading) {
     return (

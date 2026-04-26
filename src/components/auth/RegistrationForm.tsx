@@ -4,9 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, FileText, GraduationCap } from "lucide-react";
+import { MapPin, FileText, GraduationCap, School } from "lucide-react";
 import type { Subject } from "@/lib/queries/subjectQueries";
 import { getSubjects } from "@/lib/queries/subjectQueries";
+import { AddressPicker } from "@/components/AddressPicker";
+import { SchoolPicker } from "@/components/SchoolPicker";
 
 interface RegistrationFormProps {
   role: "student" | "tutor";
@@ -19,6 +21,16 @@ interface RegistrationFormProps {
   setPhone: (value: string) => void;
   address: string;
   setAddress: (value: string) => void;
+  province_code?: string;
+  setProvinceCode: (value: string) => void;
+  regency_code?: string;
+  setRegencyCode: (value: string) => void;
+  district_code?: string;
+  setDistrictCode: (value: string) => void;
+  village_code?: string;
+  setVillageCode: (value: string) => void;
+  schoolName: string;
+  setSchoolName: (value: string) => void;
   location: { lat: number; lng: number } | null;
   locationError: string;
   subjects: string[];
@@ -56,6 +68,16 @@ export function RegistrationForm({
   setPhone,
   address,
   setAddress,
+  province_code,
+  setProvinceCode,
+  regency_code,
+  setRegencyCode,
+  district_code,
+  setDistrictCode,
+  village_code,
+  setVillageCode,
+  schoolName,
+  setSchoolName,
   location,
   locationError,
   subjects,
@@ -150,17 +172,47 @@ export function RegistrationForm({
         <Label htmlFor="phone">Nomor HP</Label>
         <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="address">Alamat</Label>
-        <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
+
+      {role === "student" && (
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <School className="h-4 w-4" /> Asal Sekolah
+          </Label>
+          <SchoolPicker 
+            value={schoolName}
+            onChange={setSchoolName}
+            placeholder="Ketik nama sekolah Anda..."
+          />
+        </div>
+      )}
+      
+      <div className="border-t pt-4">
+        <Label className="text-base font-semibold mb-4 block">Alamat Lengkap</Label>
+        <AddressPicker
+          value={{
+            province_code,
+            regency_code,
+            district_code,
+            village_code,
+            address,
+          }}
+          onChange={(val) => {
+            if (val?.province_code) setProvinceCode(val.province_code);
+            if (val?.regency_code) setRegencyCode(val.regency_code);
+            if (val?.district_code) setDistrictCode(val.district_code);
+            if (val?.village_code) setVillageCode(val.village_code);
+            if (val?.address !== undefined) setAddress(val.address);
+          }}
+        />
       </div>
+
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
-          <MapPin className="h-4 w-4" /> Lokasi
+          <MapPin className="h-4 w-4" /> Lokasi Geografis
         </Label>
         {location ? (
           <p className="text-sm text-muted-foreground">
-            ✓ Lokasi terdeteksi ({location.lat.toFixed(6)}, {location.lng.toFixed(6)})
+            ✓ Koordinat terdeteksi ({location.lat.toFixed(6)}, {location.lng.toFixed(6)})
           </p>
         ) : (
           <p className="text-sm text-destructive">{locationError}</p>

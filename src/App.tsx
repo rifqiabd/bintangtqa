@@ -52,6 +52,7 @@ const App = () => (
             <Route path="students" element={<TutorStudents />} />
             <Route path="profile" element={<TutorProfile />} />
             <Route path="pending" element={<TutorPendingApproval />} />
+            <Route path="resubmit" element={<TutorPendingApproval isEdit={true} />} />
           </Route>
 
           {/* Admin Routes */}

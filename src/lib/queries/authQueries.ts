@@ -35,6 +35,10 @@ export const registerUser = async (
   role: "student" | "tutor",
   options?: {
     address?: string;
+    province_code?: string;
+    regency_code?: string;
+    district_code?: string;
+    village_code?: string;
     latitude?: number;
     longitude?: number;
     subjects?: string[];
@@ -46,6 +50,7 @@ export const registerUser = async (
     major?: string;
     graduationYear?: number;
     ipk?: number;
+    schoolName?: string;
   }
 ) => {
   const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -65,8 +70,13 @@ export const registerUser = async (
     email,
     phone,
     address: options?.address,
+    province_code: options?.province_code,
+    regency_code: options?.regency_code,
+    district_code: options?.district_code,
+    village_code: options?.village_code,
     latitude: options?.latitude,
     longitude: options?.longitude,
+    school_name: options?.schoolName,
   });
 
   const { error: roleError } = await supabase.from("user_roles").insert({

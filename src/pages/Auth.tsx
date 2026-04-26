@@ -133,8 +133,13 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [provinceCode, setProvinceCode] = useState("");
+  const [regencyCode, setRegencyCode] = useState("");
+  const [districtCode, setDistrictCode] = useState("");
+  const [villageCode, setVillageCode] = useState("");
   const [subjects, setSubjects] = useState<string[]>([]);
   const [experience, setExperience] = useState("");
+  const [schoolName, setSchoolName] = useState("");
   
   // Tutor document links
   const [ktpLink, setKtpLink] = useState("");
@@ -227,6 +232,10 @@ const Auth = () => {
         role,
         {
           address: validatedData.address,
+          province_code: provinceCode,
+          regency_code: regencyCode,
+          district_code: districtCode,
+          village_code: villageCode,
           latitude: location?.lat,
           longitude: location?.lng,
           subjects: role === "tutor" ? subjects : undefined,
@@ -238,6 +247,7 @@ const Auth = () => {
           major: role === "tutor" ? major : undefined,
           graduationYear: role === "tutor" && graduationYear ? parseInt(graduationYear) : undefined,
           ipk: role === "tutor" && ipk ? parseFloat(ipk) : undefined,
+          schoolName: role === "student" ? schoolName : undefined,
         }
       );
 
@@ -382,6 +392,16 @@ const Auth = () => {
                 setPhone={setPhone}
                 address={address}
                 setAddress={setAddress}
+                province_code={provinceCode}
+                setProvinceCode={setProvinceCode}
+                regency_code={regencyCode}
+                setRegencyCode={setRegencyCode}
+                district_code={districtCode}
+                setDistrictCode={setDistrictCode}
+                village_code={villageCode}
+                setVillageCode={setVillageCode}
+                schoolName={schoolName}
+                setSchoolName={setSchoolName}
                 location={location}
                 locationError={locationError}
                 subjects={subjects}

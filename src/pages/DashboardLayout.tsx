@@ -34,13 +34,13 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
       if (!session) return;
 
       // Check tutor approval
-      if (role === "tutor" && location.pathname !== "/tutor/pending") {
+      if (role === "tutor") {
         const { data: tutorDetails } = await supabase
           .from("tutor_details")
           .select("is_approved")
           .eq("tutor_id", session.user.id)
-          .single();
-        setIsApproved(tutorDetails?.is_approved ?? true);
+          .maybeSingle();
+        setIsApproved(tutorDetails?.is_approved ?? false);
       }
 
       // Fetch profile

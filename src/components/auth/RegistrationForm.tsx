@@ -18,6 +18,8 @@ interface RegistrationFormProps {
   setEmail: (value: string) => void;
   phone: string;
   setPhone: (value: string) => void;
+  school: string;
+  setSchool: (value: string) => void;
   addressRegion: {
     province_code: string;
     regency_code: string;
@@ -61,6 +63,8 @@ export function RegistrationForm({
   setEmail,
   phone,
   setPhone,
+  school,
+  setSchool,
   addressRegion,
   setAddressRegion,
   location,
@@ -157,6 +161,12 @@ export function RegistrationForm({
         <Label htmlFor="phone">Nomor HP</Label>
         <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
       </div>
+      {role === "student" && (
+        <div className="space-y-2">
+          <Label htmlFor="school">Asal Sekolah</Label>
+          <Input id="school" value={school} onChange={(e) => setSchool(e.target.value)} required />
+        </div>
+      )}
       <div className="space-y-2">
         <Label>Alamat Wilayah</Label>
         <AddressPicker

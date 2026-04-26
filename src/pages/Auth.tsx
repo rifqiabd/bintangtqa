@@ -132,6 +132,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [school, setSchool] = useState("");
   const [addressRegion, setAddressRegion] = useState({
     province_code: "",
     regency_code: "",
@@ -232,6 +233,7 @@ const Auth = () => {
         validatedData.phone,
         role,
         {
+          school: role === "student" ? school : undefined,
           address: validatedData.address,
           province_code: addressRegion.province_code || undefined,
           regency_code: addressRegion.regency_code || undefined,
@@ -390,6 +392,8 @@ const Auth = () => {
                 setEmail={setEmail}
                 phone={phone}
                 setPhone={setPhone}
+                school={school}
+                setSchool={setSchool}
                 addressRegion={addressRegion}
                 setAddressRegion={setAddressRegion}
                 location={location}

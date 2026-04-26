@@ -34,6 +34,7 @@ export const registerUser = async (
   phone: string,
   role: "student" | "tutor",
   options?: {
+    school?: string;
     address?: string;
     province_code?: string;
     regency_code?: string;
@@ -52,12 +53,20 @@ export const registerUser = async (
     ipk?: number;
   }
 ) => {
+  const signUpOptions: any = {
+    emailRedirectTo: `${window.location.origin}/`,
+  };
+
+  if (role === "student" && options?.school) {
+    signUpOptions.data = {
+      school: options.school,
+    };
+  }
+
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      emailRedirectTo: `${window.location.origin}/`,
-    },
+    options: signUpOptions,
   });
 
   if (authError) throw authError;

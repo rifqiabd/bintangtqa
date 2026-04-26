@@ -58,6 +58,7 @@ const Footer = () => {
             <h3 className="font-semibold mb-4">Ikuti Kami</h3>
             <div className="flex gap-3">
               <a 
+                title="Instagram"
                 href="https://www.instagram.com/tqassimbani/" 
                 target="_blank" 
                 rel="noopener noreferrer"
@@ -66,6 +67,7 @@ const Footer = () => {
                 <Instagram className="h-5 w-5 text-primary" />
               </a>
               <a 
+                title="Facebook"
                 href="https://www.facebook.com/thibbilqulubassimbani/" 
                 target="_blank" 
                 rel="noopener noreferrer"
@@ -74,6 +76,7 @@ const Footer = () => {
                 <Facebook className="h-5 w-5 text-primary" />
               </a>
               <a 
+                title="YouTube"
                 href="https://www.youtube.com/@thibbil_qulub_assimbani" 
                 target="_blank" 
                 rel="noopener noreferrer"

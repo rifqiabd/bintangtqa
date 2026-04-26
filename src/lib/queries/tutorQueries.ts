@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tutor } from "@/lib/types/tutor";
 import type { EditingTutor, AddingTutor, Tutor } from "../types/tutor";
 
 export const loadTutors = async (): Promise<Tutor[]> => {
@@ -112,7 +111,7 @@ export const addTutor = async (data: AddingTutor): Promise<string> => {
 
   await supabase.from("tutor_details").insert({
     tutor_id: authData.user.id,
-    subjects: [],
+    subjects: JSON.stringify([]),
     is_available: true,
   });
 

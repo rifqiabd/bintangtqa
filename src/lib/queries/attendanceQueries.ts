@@ -77,7 +77,6 @@ export const getAttendanceStats = async (): Promise<AttendanceStats> => {
     tutorStats,
   };
 };
-};
 
 export const getTutorsForFilter = async (): Promise<{ id: string; name: string }[]> => {
   const { data, error } = await supabase

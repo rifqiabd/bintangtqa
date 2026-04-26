@@ -8,12 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { z } from "zod";
 import { GraduationCap } from "lucide-react";
 
 import { LoginForm, RegistrationForm } from "@/components/auth";
 import { loginSchema, registrationSchema } from "@/lib/constants/auth";
 import { loginUser, registerUser, forgotPassword, resetPassword, getGoogleAuthUrl } from "@/lib/queries/authQueries";
-import type { Role } from "@/lib/types/user";
 
 const Auth = () => {
   const navigate = useNavigate();

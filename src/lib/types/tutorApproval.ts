@@ -17,13 +17,15 @@ export interface PendingTutor {
   ipk: number | null;
 }
 
+import type { Json } from "@/integrations/supabase/types";
+
 export interface ApprovalHistory {
   id: string;
   tutor_id: string;
   approved_by: string | null;
   approved_at: string;
   notes: string | null;
-  created_data: Record<string, unknown> | null;
+  created_data: Json | null;
 }
 
 export interface RejectionHistory {
@@ -32,5 +34,5 @@ export interface RejectionHistory {
   rejection_reason: string;
   rejected_at: string;
   resubmitted_at: string | null;
-  updated_data: Record<string, unknown> | null;
+  updated_data: Json | null;
 }

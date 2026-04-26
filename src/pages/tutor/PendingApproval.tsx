@@ -138,7 +138,7 @@ const TutorPendingApproval = ({ isEdit = false }: Props) => {
         .eq("tutor_id", session.user.id)
         .order("rejected_at", { ascending: false });
 
-      setRejectionHistory(history || []);
+      setRejectionHistory((history || []) as RejectionHistory[]);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -355,6 +355,7 @@ const TutorPendingApproval = ({ isEdit = false }: Props) => {
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={formData.graduation_year}
                     onChange={e => setFormData({...formData, graduation_year: e.target.value})}
+                    aria-label="Tahun Lulus"
                   >
                     <option value="">Pilih tahun</option>
                     {years.map(y => <option key={y} value={y}>{y}</option>)}
@@ -391,7 +392,7 @@ const TutorPendingApproval = ({ isEdit = false }: Props) => {
                       {formData.certificate_links.map((link, i) => (
                         <div key={i} className="flex items-center justify-between text-sm bg-muted p-2 px-3 rounded-md border">
                           <span className="truncate flex-1 mr-2">{link}</span>
-                          <button type="button" className="text-destructive hover:bg-destructive/10 p-1 rounded transition-colors" onClick={() => removeCertLink(i)}>
+                          <button type="button" className="text-destructive hover:bg-destructive/10 p-1 rounded transition-colors" onClick={() => removeCertLink(i)} title="Hapus link sertifikat" aria-label="Hapus link sertifikat">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>

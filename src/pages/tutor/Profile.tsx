@@ -87,7 +87,7 @@ const TutorProfile = () => {
 
       if (tutorData) {
         setTutorDetails({
-          subjects: tutorData.subjects || [],
+          subjects: Array.isArray(tutorData.subjects) ? tutorData.subjects : (tutorData.subjects ? JSON.parse(tutorData.subjects) : []),
           experience: tutorData.experience || "",
           hourly_rate: tutorData.hourly_rate?.toString() || "",
           is_available: tutorData.is_available ?? true,

@@ -130,7 +130,6 @@ export const requestTutor = async (tutorId: string, subject: string): Promise<vo
   const { error } = await supabase.from("enrollments").insert({
     student_id: session.user.id,
     tutor_id: tutorId,
-    subject,
     status: "pending",
   });
 

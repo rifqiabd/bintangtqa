@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MapPin, FileText, GraduationCap } from "lucide-react";
 import type { Subject } from "@/lib/queries/subjectQueries";
 import { getSubjects } from "@/lib/queries/subjectQueries";
+import { AddressPicker } from "@/components/AddressPicker";
 
 interface RegistrationFormProps {
   role: "student" | "tutor";
@@ -17,8 +18,14 @@ interface RegistrationFormProps {
   setEmail: (value: string) => void;
   phone: string;
   setPhone: (value: string) => void;
-  address: string;
-  setAddress: (value: string) => void;
+  addressRegion: {
+    province_code: string;
+    regency_code: string;
+    district_code: string;
+    village_code: string;
+    address: string;
+  };
+  setAddressRegion: (value: any) => void;
   location: { lat: number; lng: number } | null;
   locationError: string;
   subjects: string[];
@@ -54,8 +61,8 @@ export function RegistrationForm({
   setEmail,
   phone,
   setPhone,
-  address,
-  setAddress,
+  addressRegion,
+  setAddressRegion,
   location,
   locationError,
   subjects,
@@ -151,8 +158,15 @@ export function RegistrationForm({
         <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="address">Alamat</Label>
-        <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
+        <Label>Alamat Wilayah</Label>
+        <AddressPicker
+          value={addressRegion}
+          onChange={(val) => {
+            if (val) {
+              setAddressRegion(val);
+            }
+          }}
+        />
       </div>
       <div className="space-y-2">
         <Label className="flex items-center gap-2">

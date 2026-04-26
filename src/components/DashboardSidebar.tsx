@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, Users, Calendar, MapPin, LogOut, User, GraduationCap, X, BookOpen, UserPlus } from "lucide-react";
+import { Home, Users, Calendar, MapPin, LogOut, User, GraduationCap, X, BookOpen, UserPlus, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -10,27 +10,29 @@ interface DashboardSidebarProps {
   isCollapsed?: boolean;
   isMobileOpen?: boolean;
   onMobileClose?: () => void;
+  isApproved?: boolean;
 }
 
-const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onMobileClose }: DashboardSidebarProps) => {
+const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onMobileClose, isApproved = true }: DashboardSidebarProps) => {
   const navigate = useNavigate();
 
   const adminItems = [
     { title: "Dashboard", url: "/admin", icon: Home },
     { title: "Semua Tutor", url: "/admin/tutors", icon: Users },
     { title: "Semua Siswa", url: "/admin/students", icon: User },
+    { title: "Persetujuan Tutor", url: "/admin/tutor-approval", icon: UserCheck },
     { title: "Laporan Absensi", url: "/admin/attendance", icon: Calendar },
     { title: "Peta Lokasi", url: "/admin/map", icon: MapPin },
     { title: "Mata Pelajaran", url: "/admin/subjects", icon: BookOpen },
     { title: "Enrol Siswa", url: "/admin/enrol", icon: UserPlus },
   ];
 
-  const tutorItems = [
+  const tutorItems = isApproved ? [
     { title: "Dashboard", url: "/tutor", icon: Home },
     { title: "Siswa Saya", url: "/tutor/students", icon: Users },
     { title: "Absensi", url: "/tutor/attendance", icon: Calendar },
     { title: "Profil", url: "/tutor/profile", icon: User },
-  ];
+  ] : [];
 
   const studentItems = [
     { title: "Dashboard", url: "/student", icon: Home },
@@ -81,32 +83,32 @@ const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onM
         <div className="lg:hidden absolute top-4 right-4">
           <button
             onClick={onMobileClose}
-            className="p-2 rounded-lg hover:bg-accent"
+            className="p-2 rounded-lg hover:bg-accent text-foreground transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-5 border-b bg-gradient-to-br from-primary/5 to-transparent">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-white shadow-lg">
-            <GraduationCap className="h-7 w-7" />
+        <div className="flex items-center gap-3 px-4 h-16 border-b shrink-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
+            <GraduationCap className="h-6 w-6" />
           </div>
           {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="font-bold text-lg leading-tight text-foreground">Bintang TQA</span>
-              <span className="text-xs text-muted-foreground capitalize">
-                {role === "admin" ? "Admin Panel" : role === "tutor" ? "Panel Tutor" : "Panel Siswa"}
+            <div className="flex flex-col overflow-hidden">
+              <span className="font-bold text-base tracking-tight truncate text-foreground">Bintang TQA</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                {role}
               </span>
             </div>
           )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-6 space-y-0.5 overflow-y-auto">
           {!isCollapsed && (
-            <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Navigasi
+            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              Menu
             </div>
           )}
           {items.map((item) => (
@@ -117,35 +119,36 @@ const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onM
               onClick={handleNavClick}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors",
-                  "text-foreground",
+                  "flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 group",
                   isActive
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-muted hover:bg-accent hover:text-accent-foreground",
-                  isCollapsed && "justify-center"
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                  isCollapsed && "justify-center px-2"
                 )
               }
               title={isCollapsed ? item.title : undefined}
             >
-              <item.icon className="h-5 w-5 shrink-0" />
-              {!isCollapsed && <span className="text-base">{item.title}</span>}
+              <item.icon className={cn(
+                "h-5 w-5 shrink-0 transition-colors",
+                "group-hover:text-primary"
+              )} />
+              {!isCollapsed && <span className="text-sm">{item.title}</span>}
             </NavLink>
           ))}
         </nav>
 
         {/* Footer - Logout */}
-        <div className="p-3 border-t bg-muted/30">
+        <div className="p-3 border-t">
           <button
             onClick={handleLogout}
             className={cn(
-              "flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium transition-colors",
-              "bg-muted text-foreground hover:bg-destructive hover:text-destructive-foreground",
-              isCollapsed && "justify-center"
+              "flex items-center gap-3 w-full px-3 py-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 group",
+              isCollapsed && "justify-center px-2"
             )}
             title={isCollapsed ? "Logout" : undefined}
           >
-            <LogOut className="h-5 w-5 shrink-0" />
-            {!isCollapsed && <span className="text-base">Logout</span>}
+            <LogOut className="h-5 w-5 shrink-0 group-hover:scale-110 transition-transform" />
+            {!isCollapsed && <span className="text-sm font-medium">Logout</span>}
           </button>
         </div>
       </aside>

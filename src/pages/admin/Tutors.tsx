@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -15,146 +10,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Search, Users, Mail, Phone, MapPin, BookOpen, Eye, Power, Pencil, Plus } from "lucide-react";
+import { Search, Users, Mail, Phone, Eye, Power, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-const subjectOptions = [
-  { value: "matematika", label: "Matematika" },
-  { value: "fisika", label: "Fisika" },
-  { value: "kimia", label: "Kimia" },
-  { value: "biologi", label: "Biologi" },
-  { value: "bahasa_indonesia", label: "Bahasa Indonesia" },
-  { value: "bahasa_inggris", label: "Bahasa Inggris" },
-  { value: "ekonomi", label: "Ekonomi" },
-  { value: "akuntansi", label: "Akuntansi" },
-  { value: "sejarah", label: "Sejarah" },
-  { value: "geografi", label: "Geografi" },
-  { value: "sosiologi", label: "Sosiologi" },
-  { value: "pkn", label: "PKN" },
-];
-
-interface Tutor {
-  id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  address: string;
-  latitude: number | null;
-  longitude: number | null;
-  created_at: string;
-  tutor_details: {
-    subjects: string[];
-    experience: string;
-    is_available: boolean;
-    hourly_rate: number;
-  } | null;
-}
+import { TutorDetailModal, TutorEditModal, TutorAddModal } from "@/components/admin/modals";
+import { loadTutors, toggleTutorStatus as toggleStatus, addTutor, editTutor } from "@/lib/queries/tutorQueries";
+import type { Tutor, EditingTutor, AddingTutor } from "@/lib/types/tutor";
+import { createEmptyEditingTutor, createEmptyAddingTutor } from "@/lib/types/tutor";
+import { formatSubjectLabel } from "@/lib/constants/subjects";
 
 const AdminTutors = () => {
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
+  
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [editingTutor, setEditingTutor] = useState({
-    full_name: "",
-    phone: "",
-    address: "",
-    latitude: null as number | null,
-    longitude: null as number | null,
-    subjects: [] as string[],
-    experience: "",
-    hourly_rate: "",
-    is_available: true,
-  });
+  const [editingTutor, setEditingTutor] = useState<EditingTutor>(createEmptyEditingTutor());
   const [savingEdit, setSavingEdit] = useState(false);
+  
   const [addOpen, setAddOpen] = useState(false);
-  const [addingTutor, setAddingTutor] = useState({
-    email: "",
-    full_name: "",
-    phone: "",
-  });
+  const [addingTutor, setAddingTutor] = useState<AddingTutor>(createEmptyAddingTutor());
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    loadTutors();
+    loadData();
   }, []);
 
-  const loadTutors = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      
-      // Get all tutors from user_roles
-      const { data: tutorUsers, error: tutorError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "tutor");
-
-      if (tutorError) throw tutorError;
-
-      if (!tutorUsers || tutorUsers.length === 0) {
-        setTutors([]);
-        return;
-      }
-
-      const tutorIds = tutorUsers.map((t) => t.user_id);
-
-      // Get profiles
-      const { data: profilesData, error } = await supabase
-        .from("profiles")
-        .select(`
-          id,
-          full_name,
-          email,
-          phone,
-          address,
-          latitude,
-          longitude,
-          created_at
-        `)
-        .in("id", tutorIds)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      // Get tutor_details using bypass function
-      const { data: tutorDetailsData, error: tdError } = await supabase.rpc('admin_get_all_tutor_details');
-
-      // Merge data - parse subjects from TEXT (string) to array
-      const mergedData = (profilesData || []).map((profile) => {
-        const td = tutorDetailsData?.find((td: any) => td.tutor_id === profile.id);
-        let subjects: string[] = [];
-        
-        if (td?.subjects) {
-          try {
-            // subjects is now TEXT, parse JSON string to array
-            subjects = JSON.parse(td.subjects);
-          } catch {
-            subjects = [];
-          }
-        }
-        
-        return {
-          ...profile,
-          tutor_details: td ? {
-            subjects,
-            experience: td.experience,
-            is_available: td.is_available,
-            hourly_rate: td.hourly_rate
-          } : null
-        };
-      });
-
-      setTutors(mergedData);
+      const data = await loadTutors();
+      setTutors(data);
     } catch (error) {
       console.error("Error loading tutors:", error);
       toast.error("Gagal memuat data tutor");
@@ -163,16 +51,9 @@ const AdminTutors = () => {
     }
   };
 
-  const toggleTutorStatus = async (tutor: Tutor) => {
+  const handleToggleStatus = async (tutor: Tutor) => {
     try {
-      const newStatus = !tutor.tutor_details?.is_available;
-      const { error } = await supabase
-        .from("tutor_details")
-        .update({ is_available: newStatus })
-        .eq("tutor_id", tutor.id);
-
-      if (error) throw error;
-
+      const newStatus = await toggleStatus(tutor);
       setTutors(
         tutors.map((t) =>
           t.id === tutor.id
@@ -213,38 +94,11 @@ const AdminTutors = () => {
     setAdding(true);
 
     try {
-      const tempPassword = Math.random().toString(36).slice(-8);
-      
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: addingTutor.email,
-        password: tempPassword,
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("User creation failed");
-
-      await supabase.from("profiles").insert({
-        id: authData.user.id,
-        full_name: addingTutor.full_name,
-        email: addingTutor.email,
-        phone: addingTutor.phone,
-      });
-
-      await supabase.from("user_roles").insert({
-        user_id: authData.user.id,
-        role: "tutor",
-      });
-
-      await supabase.from("tutor_details").insert({
-        tutor_id: authData.user.id,
-        subjects: [],
-        is_available: true,
-      });
-
+      const tempPassword = await addTutor(addingTutor);
       toast.success("Tutor berhasil ditambahkan! Password: " + tempPassword);
       setAddOpen(false);
-      setAddingTutor({ email: "", full_name: "", phone: "" });
-      loadTutors();
+      setAddingTutor(createEmptyAddingTutor());
+      loadData();
     } catch (error: any) {
       console.error("Error adding tutor:", error);
       toast.error(error.message || "Gagal menambahkan tutor");
@@ -259,37 +113,10 @@ const AdminTutors = () => {
 
     try {
       if (!selectedTutor) return;
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          full_name: editingTutor.full_name,
-          phone: editingTutor.phone,
-          address: editingTutor.address,
-          latitude: editingTutor.latitude,
-          longitude: editingTutor.longitude,
-        })
-        .eq("id", selectedTutor.id);
-
-      if (profileError) throw profileError;
-
-      const { error: detailsError } = await supabase
-        .from("tutor_details")
-        .upsert({
-          tutor_id: selectedTutor.id,
-          subjects: editingTutor.subjects as any,
-          experience: editingTutor.experience,
-          hourly_rate: editingTutor.hourly_rate ? parseFloat(editingTutor.hourly_rate) : null,
-          is_available: editingTutor.is_available,
-        }, {
-          onConflict: "tutor_id",
-        });
-
-      if (detailsError) throw detailsError;
-
+      await editTutor(selectedTutor.id, editingTutor);
       toast.success("Tutor berhasil diperbarui");
       setEditOpen(false);
-      loadTutors();
+      loadData();
     } catch (error) {
       console.error("Error updating tutor:", error);
       toast.error("Gagal memperbarui tutor");
@@ -316,15 +143,6 @@ const AdminTutors = () => {
     } else {
       toast.error("Browser tidak mendukung geolokasi");
     }
-  };
-
-  const toggleSubject = (subjectValue: string) => {
-    setEditingTutor((prev) => ({
-      ...prev,
-      subjects: prev.subjects.includes(subjectValue)
-        ? prev.subjects.filter((s) => s !== subjectValue)
-        : [...prev.subjects, subjectValue],
-    }));
   };
 
   const filteredTutors = tutors.filter(
@@ -402,6 +220,7 @@ const AdminTutors = () => {
                     <TableHead>Nama</TableHead>
                     <TableHead>Kontak</TableHead>
                     <TableHead>Mata Pelajaran</TableHead>
+                    <TableHead>Siswa</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Tgl Daftar</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
@@ -438,27 +257,46 @@ const AdminTutors = () => {
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {tutor.tutor_details?.subjects?.slice(0, 3).map((subject) => (
-                            <Badge key={subject} variant="secondary" className="text-xs">
-                              {subject.replace(/_/g, " ")}
-                            </Badge>
+                            <span key={subject} className="px-2 py-0.5 bg-secondary text-secondary-foreground text-xs rounded">
+                              {formatSubjectLabel(subject)}
+                            </span>
                           ))}
                           {(tutor.tutor_details?.subjects?.length || 0) > 3 && (
-                            <Badge variant="outline" className="text-xs">
+                            <span className="px-2 py-0.5 border text-xs rounded">
                               +{(tutor.tutor_details?.subjects?.length || 0) - 3}
-                            </Badge>
+                            </span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge
+                        {(tutor.enrollments || []).length === 0 ? (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        ) : (
+                          <div className="flex flex-col gap-1">
+                            {(tutor.enrollments || []).slice(0, 2).map((e: any) => (
+                              <div key={e.id} className="text-xs whitespace-nowrap">
+                                <span className="font-medium">{e.student_name}</span>
+                                <span className="text-muted-foreground ml-1">({formatSubjectLabel(e.subject_name)})</span>
+                              </div>
+                            ))}
+                            {(tutor.enrollments?.length || 0) > 2 && (
+                              <span className="text-[10px] text-muted-foreground italic">
+                                +{(tutor.enrollments?.length || 0) - 2} siswa lainnya
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span
                           className={
                             tutor.tutor_details?.is_available
-                              ? "bg-green-100 text-green-800 hover:bg-green-100"
-                              : "bg-red-100 text-red-800 hover:bg-red-100"
+                              ? "px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
+                              : "px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full"
                           }
                         >
                           {tutor.tutor_details?.is_available ? "Aktif" : "Nonaktif"}
-                        </Badge>
+                        </span>
                       </TableCell>
                       <TableCell>{formatDate(tutor.created_at)}</TableCell>
                       <TableCell>
@@ -475,13 +313,9 @@ const AdminTutors = () => {
                             Lihat
                           </Button>
                           <Button
-                            variant={
-                              tutor.tutor_details?.is_available
-                                ? "destructive"
-                                : "default"
-                            }
+                            variant={tutor.tutor_details?.is_available ? "destructive" : "default"}
                             size="sm"
-                            onClick={() => toggleTutorStatus(tutor)}
+                            onClick={() => handleToggleStatus(tutor)}
                           >
                             <Power className="h-4 w-4 mr-1" />
                             {tutor.tutor_details?.is_available ? "Nonaktifkan" : "Aktifkan"}
@@ -505,272 +339,32 @@ const AdminTutors = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detail Tutor</DialogTitle>
-            <DialogDescription>
-              Informasi lengkap tentang tutor
-            </DialogDescription>
-          </DialogHeader>
-          {selectedTutor && (
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Users className="h-10 w-10 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold">{selectedTutor.full_name}</h2>
-                  <Badge
-                    className={
-                      selectedTutor.tutor_details?.is_available
-                        ? "bg-green-100 text-green-800 hover:bg-green-100"
-                        : "bg-red-100 text-red-800 hover:bg-red-100"
-                    }
-                  >
-                    {selectedTutor.tutor_details?.is_available ? "Aktif" : "Nonaktif"}
-                  </Badge>
-                </div>
-              </div>
+      <TutorDetailModal
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        tutor={selectedTutor}
+        onToggleStatus={handleToggleStatus}
+      />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <h3 className="font-semibold">Informasi Kontak</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{selectedTutor.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{selectedTutor.phone}</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <span>{selectedTutor.address || "Alamat belum diisi"}</span>
-                    </div>
-                  </div>
-                </div>
+      <TutorEditModal
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        tutor={selectedTutor}
+        editingData={editingTutor}
+        setEditingData={setEditingTutor}
+        saving={savingEdit}
+        onSave={handleEditTutor}
+        onGetLocation={getCurrentLocation}
+      />
 
-                <div className="space-y-3">
-                  <h3 className="font-semibold">Informasi Tutor</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex flex-wrap gap-1">
-                        {selectedTutor.tutor_details?.subjects?.map((subject) => (
-                          <Badge key={subject} variant="secondary">
-                            {subject.replace(/_/g, " ")}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Experience:</span>
-                      <span>
-                        {selectedTutor.tutor_details?.experience ||
-                          "Belum ada"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Tarif:</span>
-                      <span>
-                        {selectedTutor.tutor_details?.hourly_rate
-                          ? `Rp ${selectedTutor.tutor_details.hourly_rate.toLocaleString("id-ID")}/jam`
-                          : "Belum ditentukan"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                Tutor sejak: {formatDate(selectedTutor.created_at)}
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailOpen(false)}>
-              Tutup
-            </Button>
-            {selectedTutor && (
-              <Button
-                variant={selectedTutor.tutor_details?.is_available ? "destructive" : "default"}
-                onClick={() => {
-                  toggleTutorStatus(selectedTutor);
-                  setDetailOpen(false);
-                }}
-              >
-                <Power className="h-4 w-4 mr-2" />
-                {selectedTutor.tutor_details?.is_available
-                  ? "Nonaktifkan"
-                  : "Aktifkan"}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Tutor</DialogTitle>
-            <DialogDescription>
-              Edit informasi tutor
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditTutor} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="editFullName">Nama Lengkap</Label>
-              <Input
-                id="editFullName"
-                value={editingTutor.full_name}
-                onChange={(e) => setEditingTutor({ ...editingTutor, full_name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editPhone">Nomor HP</Label>
-              <Input
-                id="editPhone"
-                value={editingTutor.phone}
-                onChange={(e) => setEditingTutor({ ...editingTutor, phone: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editAddress">Alamat</Label>
-              <Textarea
-                id="editAddress"
-                value={editingTutor.address}
-                onChange={(e) => setEditingTutor({ ...editingTutor, address: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Lokasi</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={
-                    editingTutor.latitude && editingTutor.longitude
-                      ? `${editingTutor.latitude.toFixed(6)}, ${editingTutor.longitude?.toFixed(6)}`
-                      : "Belum diset"
-                  }
-                  disabled
-                  className="bg-muted"
-                />
-                <Button type="button" variant="outline" onClick={getCurrentLocation}>
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Dapatkan Lokasi
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Mata Pelajaran</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {subjectOptions.map((subject) => (
-                  <div key={subject.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`edit-${subject.value}`}
-                      checked={editingTutor.subjects.includes(subject.value)}
-                      onCheckedChange={() => toggleSubject(subject.value)}
-                    />
-                    <label htmlFor={`edit-${subject.value}`} className="text-sm">
-                      {subject.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editExperience">Pengalaman</Label>
-              <Textarea
-                id="editExperience"
-                value={editingTutor.experience}
-                onChange={(e) => setEditingTutor({ ...editingTutor, experience: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editRate">Tarif per Jam (Rp)</Label>
-              <Input
-                id="editRate"
-                type="number"
-                value={editingTutor.hourly_rate}
-                onChange={(e) => setEditingTutor({ ...editingTutor, hourly_rate: e.target.value })}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="editAvailable"
-                checked={editingTutor.is_available}
-                onCheckedChange={(checked) => setEditingTutor({ ...editingTutor, is_available: !!checked })}
-              />
-              <label htmlFor="editAvailable">Tersedia untuk mengajar</label>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
-                Batal
-              </Button>
-              <Button type="submit" disabled={savingEdit}>
-                {savingEdit ? "Menyimpan..." : "Simpan"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Tutor Dialog */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Tutor Baru</DialogTitle>
-            <DialogDescription>
-              Daftar tutor baru secara offline. Akun akan dibuatkan otomatis.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleAddTutor} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="addEmail">Email</Label>
-              <Input
-                id="addEmail"
-                type="email"
-                value={addingTutor.email}
-                onChange={(e) => setAddingTutor({ ...addingTutor, email: e.target.value })}
-                placeholder="tutor@email.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="addName">Nama Lengkap</Label>
-              <Input
-                id="addName"
-                value={addingTutor.full_name}
-                onChange={(e) => setAddingTutor({ ...addingTutor, full_name: e.target.value })}
-                placeholder="Nama lengkap tutor"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="addPhone">Nomor HP</Label>
-              <Input
-                id="addPhone"
-                value={addingTutor.phone}
-                onChange={(e) => setAddingTutor({ ...addingTutor, phone: e.target.value })}
-                placeholder="0812..."
-                required
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
-                Batal
-              </Button>
-              <Button type="submit" disabled={adding}>
-                {adding ? "Menambahkan..." : "Tambah Tutor"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <TutorAddModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        formData={addingTutor}
+        setFormData={setAddingTutor}
+        loading={adding}
+        onSubmit={handleAddTutor}
+      />
     </div>
   );
 };

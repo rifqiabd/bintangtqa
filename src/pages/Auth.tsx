@@ -5,30 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
-import { GraduationCap, MapPin, Chrome } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { z } from "zod";
+import { GraduationCap } from "lucide-react";
 
-// Validation schemas
-const loginSchema = z.object({
-  email: z.string().trim().email("Format email tidak valid").max(255, "Email terlalu panjang"),
-  password: z.string().min(8, "Password minimal 8 karakter").max(72, "Password terlalu panjang"),
-});
-
-const registrationSchema = z.object({
-  fullName: z.string().trim().min(2, "Nama minimal 2 karakter").max(100, "Nama terlalu panjang"),
-  email: z.string().trim().email("Format email tidak valid").max(255, "Email terlalu panjang"),
-  phone: z.string().trim().regex(/^[0-9]{10,15}$/, "Nomor HP harus 10-15 digit angka"),
-  password: z.string().min(8, "Password minimal 8 karakter").max(72, "Password terlalu panjang"),
-  address: z.string().max(500, "Alamat terlalu panjang").optional(),
-  experience: z.string().max(2000, "Pengalaman terlalu panjang").optional(),
-});
+import { LoginForm, RegistrationForm } from "@/components/auth";
+import { loginSchema, registrationSchema } from "@/lib/constants/auth";
+import { loginUser, registerUser, forgotPassword, resetPassword, getGoogleAuthUrl } from "@/lib/queries/authQueries";
+import type { Role } from "@/lib/types/user";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -42,7 +27,14 @@ const Auth = () => {
   const [locationError, setLocationError] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  // Check for OAuth errors in URL
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+
+  const isResetMode = searchParams.get("reset") === "true";
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
+
   useEffect(() => {
     const error = searchParams.get("error");
     const errorDescription = searchParams.get("error_description");
@@ -56,75 +48,12 @@ const Auth = () => {
         toast.error("Login dengan Google gagal. Silakan coba lagi.");
       }
       
-      // Clean up URL
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, "", cleanUrl);
     }
   }, [searchParams]);
 
-  // Login form
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  // Registration form
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [subjects, setSubjects] = useState<string[]>([]);
-  const [experience, setExperience] = useState("");
-  
-  // Forgot password form
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
-
-  // Reset password from email link
-  const isResetMode = searchParams.get("reset") === "true";
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [resettingPassword, setResettingPassword] = useState(false);
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newPassword) {
-      toast.error("Password harus diisi");
-      return;
-    }
-    if (newPassword.length < 8) {
-      toast.error("Password minimal 8 karakter");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("Password tidak cocok");
-      return;
-    }
-
-    setResettingPassword(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      
-      if (error) throw error;
-      
-      toast.success("Password berhasil diubah");
-      navigate("/auth");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Gagal reset password");
-    } finally {
-      setResettingPassword(false);
-    }
-  };
-
-  const subjectOptions = [
-    { value: "matematika", label: "Matematika" },
-    { value: "fisika", label: "Fisika" },
-    { value: "kimia", label: "Kimia" },
-    { value: "biologi", label: "Biologi" },
-    { value: "bahasa_indonesia", label: "Bahasa Indonesia" },
-    { value: "bahasa_inggris", label: "Bahasa Inggris" },
-  ];
-
   useEffect(() => {
-    // Get current location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -142,54 +71,11 @@ const Auth = () => {
     }
   }, []);
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth`,
-        },
-      });
-      if (error) throw error;
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Login dengan Google gagal");
-      setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setResetPasswordLoading(true);
-    
-    try {
-      if (!resetEmail.trim()) {
-        throw new Error("Email harus diisi");
-      }
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/auth?reset=true`,
-      });
-      
-      if (error) throw error;
-      
-      toast.success("Link reset password telah dikirim ke email Anda");
-      setShowForgotPassword(false);
-      setResetEmail("");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Gagal mengirim link reset password");
-    } finally {
-      setResetPasswordLoading(false);
-    }
-  };
-
-  // Handle OAuth callback
   useEffect(() => {
     const handleAuthCallback = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        // Check if user has a role
         const { data: userRoles } = await supabase
           .from("user_roles")
           .select("role")
@@ -197,7 +83,6 @@ const Auth = () => {
           .limit(1);
 
         if (userRoles && userRoles.length > 0) {
-          // User has role, redirect based on role
           if (userRoles[0].role === "admin") {
             navigate("/admin");
           } else if (userRoles[0].role === "tutor") {
@@ -206,7 +91,6 @@ const Auth = () => {
             navigate("/student");
           }
         } else {
-          // New Google user, create profile and role
           const { data: existingProfile } = await supabase
             .from("profiles")
             .select("id")
@@ -222,7 +106,6 @@ const Auth = () => {
             });
           }
 
-          // Check if role exists, if not create as student
           const { data: roleCheck } = await supabase
             .from("user_roles")
             .select("role")
@@ -245,52 +128,68 @@ const Auth = () => {
     handleAuthCallback();
   }, [navigate]);
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [experience, setExperience] = useState("");
+  
+  // Tutor document links
+  const [ktpLink, setKtpLink] = useState("");
+  const [cvLink, setCvLink] = useState("");
+  const [certificateLinks, setCertificateLinks] = useState<string[]>([]);
+  
+  // Education
+  const [university, setUniversity] = useState("");
+  const [major, setMajor] = useState("");
+  const [graduationYear, setGraduationYear] = useState("");
+  const [ipk, setIpk] = useState("");
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      await getGoogleAuthUrl();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Login dengan Google gagal");
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetPasswordLoading(true);
+    
+    try {
+      if (!resetEmail.trim()) {
+        throw new Error("Email harus diisi");
+      }
+      
+      await forgotPassword(resetEmail);
+      toast.success("Link reset password telah dikirim ke email Anda");
+      setShowForgotPassword(false);
+      setResetEmail("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal mengirim link reset password");
+    } finally {
+      setResetPasswordLoading(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Validate input
       const validatedData = loginSchema.parse({ email, password });
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: validatedData.email,
-        password: validatedData.password,
-      });
-
-      if (error) throw error;
-
-      // Get user role from user_roles table
-      const { data: userRoles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id)
-        .limit(1);
-
-      // If no role exists, create as student by default
-      if (!userRoles || userRoles.length === 0) {
-        const { error: insertError } = await supabase.from("user_roles").insert({
-          user_id: data.user.id,
-          role: "student",
-        });
-        
-        if (!insertError) {
-          toast.success("Login berhasil!");
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          navigate("/student");
-        } else {
-          console.error("Error creating role:", insertError);
-          toast.error("Gagal membuat role user");
-        }
-        return;
-      }
-
+      const userRole = await loginUser(validatedData.email, validatedData.password);
+      
       toast.success("Login berhasil!");
       
-      // Redirect based on role
-      if (userRoles[0].role === "admin") {
+      if (userRole === "admin") {
         navigate("/admin");
-      } else if (userRoles[0].role === "tutor") {
+      } else if (userRole === "tutor") {
         navigate("/tutor");
       } else {
         navigate("/student");
@@ -311,7 +210,6 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Validate input
       const validatedData = registrationSchema.parse({
         fullName,
         email,
@@ -321,57 +219,37 @@ const Auth = () => {
         experience: experience || undefined,
       });
 
-      // Register user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: validatedData.email,
-        password: validatedData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-        },
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("User creation failed");
-
-      // Create profile (without role)
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: authData.user.id,
-        full_name: validatedData.fullName,
-        email: validatedData.email,
-        phone: validatedData.phone,
-        address: validatedData.address,
-        latitude: location?.lat,
-        longitude: location?.lng,
-      });
-
-      if (profileError) throw profileError;
-
-      // Create user role in user_roles table
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: authData.user.id,
-        role: role,
-      });
-
-      if (roleError) throw roleError;
-
-      // If tutor, create tutor details
-      if (role === "tutor") {
-        const { error: tutorError } = await supabase.from("tutor_details").insert({
-          tutor_id: authData.user.id,
-          subjects: subjects as Database["public"]["Enums"]["subject_area"][],
+      await registerUser(
+        validatedData.email,
+        validatedData.password,
+        validatedData.fullName,
+        validatedData.phone,
+        role,
+        {
+          address: validatedData.address,
+          latitude: location?.lat,
+          longitude: location?.lng,
+          subjects: role === "tutor" ? subjects : undefined,
           experience: validatedData.experience,
-        });
+          ktpLink: role === "tutor" ? ktpLink : undefined,
+          cvLink: role === "tutor" ? cvLink : undefined,
+          certificateLinks: role === "tutor" && certificateLinks.length > 0 ? certificateLinks : undefined,
+          university: role === "tutor" ? university : undefined,
+          major: role === "tutor" ? major : undefined,
+          graduationYear: role === "tutor" && graduationYear ? parseInt(graduationYear) : undefined,
+          ipk: role === "tutor" && ipk ? parseFloat(ipk) : undefined,
+        }
+      );
 
-        if (tutorError) throw tutorError;
-      }
-
-      toast.success("Registrasi berhasil! Silakan login.");
+      toast.success(role === "tutor" 
+        ? "Registrasi berhasil! Menunggu persetujuan admin." 
+        : "Registrasi berhasil! Silakan login.");
       setIsLogin(true);
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       } else {
-        toast.error(error.message || "Registrasi gagal");
+        toast.error(error instanceof Error ? error.message : "Registrasi gagal");
       }
     } finally {
       setLoading(false);
@@ -392,7 +270,34 @@ const Auth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleResetPassword} className="space-y-4">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!newPassword) {
+                toast.error("Password harus diisi");
+                return;
+              }
+              if (newPassword.length < 8) {
+                toast.error("Password minimal 8 karakter");
+                return;
+              }
+              if (newPassword !== confirmPassword) {
+                toast.error("Password tidak cocok");
+                return;
+              }
+
+              setResettingPassword(true);
+              resetPassword(newPassword)
+                .then(() => {
+                  toast.success("Password berhasil diubah");
+                  navigate("/auth");
+                })
+                .catch((error) => {
+                  toast.error(error instanceof Error ? error.message : "Gagal reset password");
+                })
+                .finally(() => {
+                  setResettingPassword(false);
+                });
+            }} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="newPassword">Password Baru</Label>
                 <Input
@@ -453,234 +358,97 @@ const Auth = () => {
             </TabsList>
 
             <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="nama@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <button
-                      type="button"
-                      className="text-sm text-primary hover:underline"
-                      onClick={() => setShowForgotPassword(true)}
-                    >
-                      Lupa password?
-                    </button>
-                  </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Memproses..." : "Masuk"}
-                </Button>
-
-                <div className="relative my-4">
-                  <Separator />
-                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                    atau
-                  </span>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleGoogleLogin}
-                  disabled={loading}
-                >
-                  <Chrome className="mr-2 h-4 w-4" />
-                  Masuk dengan Google
-                </Button>
-              </form>
+              <LoginForm
+                email={email}
+                setEmail={setEmail}
+                password={password}
+                setPassword={setPassword}
+                loading={loading}
+                onLogin={handleLogin}
+                onGoogleLogin={handleGoogleLogin}
+                onForgotPassword={() => setShowForgotPassword(true)}
+              />
             </TabsContent>
 
             <TabsContent value="register">
-              <div className="mb-4">
-                <Label>Daftar Sebagai</Label>
-                <div className="flex gap-4 mt-2">
-                  <Button
-                    type="button"
-                    variant={role === "student" ? "default" : "outline"}
-                    className="flex-1"
-                    onClick={() => setRole("student")}
-                  >
-                    Siswa
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={role === "tutor" ? "default" : "outline"}
-                    className="flex-1"
-                    onClick={() => setRole("tutor")}
-                  >
-                    Tutor
-                  </Button>
-                </div>
-              </div>
-
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Nama Lengkap</Label>
-                  <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="regEmail">Email</Label>
-                  <Input
-                    id="regEmail"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Nomor HP</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Alamat</Label>
-                  <Input
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Lokasi
-                  </Label>
-                  {location ? (
-                    <p className="text-sm text-muted-foreground">
-                      ✓ Lokasi terdeteksi ({location.lat.toFixed(6)}, {location.lng.toFixed(6)})
-                    </p>
-                  ) : (
-                    <p className="text-sm text-destructive">{locationError}</p>
-                  )}
-                </div>
-
-                {role === "tutor" && (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Mata Pelajaran</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {subjectOptions.map((subject) => (
-                          <div key={subject.value} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={subject.value}
-                              checked={subjects.includes(subject.value)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSubjects([...subjects, subject.value]);
-                                } else {
-                                  setSubjects(subjects.filter((s) => s !== subject.value));
-                                }
-                              }}
-                            />
-                            <label
-                              htmlFor={subject.value}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              {subject.label}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="experience">Pengalaman Mengajar</Label>
-                      <Textarea
-                        id="experience"
-                        value={experience}
-                        onChange={(e) => setExperience(e.target.value)}
-                        placeholder="Ceritakan pengalaman mengajar Anda..."
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="regPassword">Password</Label>
-                  <Input
-                    id="regPassword"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Memproses..." : "Daftar"}
-                </Button>
-              </form>
+              <RegistrationForm
+                role={role}
+                setRole={setRole}
+                fullName={fullName}
+                setFullName={setFullName}
+                email={email}
+                setEmail={setEmail}
+                phone={phone}
+                setPhone={setPhone}
+                address={address}
+                setAddress={setAddress}
+                location={location}
+                locationError={locationError}
+                subjects={subjects}
+                setSubjects={setSubjects}
+                experience={experience}
+                setExperience={setExperience}
+                password={password}
+                setPassword={setPassword}
+                ktpLink={ktpLink}
+                setKtpLink={setKtpLink}
+                cvLink={cvLink}
+                setCvLink={setCvLink}
+                certificateLinks={certificateLinks}
+                setCertificateLinks={setCertificateLinks}
+                university={university}
+                setUniversity={setUniversity}
+                major={major}
+                setMajor={setMajor}
+                graduationYear={graduationYear}
+                setGraduationYear={setGraduationYear}
+                ipk={ipk}
+                setIpk={setIpk}
+                loading={loading}
+                onSubmit={handleRegister}
+              />
             </TabsContent>
           </Tabs>
-</CardContent>
-        </Card>
-        
-        {/* Forgot Password Dialog */}
-        <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Lupa Password</DialogTitle>
-              <DialogDescription>
-                Masukkan email Anda untuk menerima link reset password.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="resetEmail">Email</Label>
-                <Input
-                  id="resetEmail"
-                  type="email"
-                  placeholder="nama@email.com"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowForgotPassword(false)}
-                >
-                  Batal
-                </Button>
-                <Button type="submit" disabled={resetPasswordLoading}>
-                  {resetPasswordLoading ? "Mengirim..." : "Kirim Link Reset"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-    );
-  };
+        </CardContent>
+      </Card>
+      
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Lupa Password</DialogTitle>
+            <DialogDescription>
+              Masukkan email Anda untuk menerima link reset password.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="resetEmail">Email</Label>
+              <Input
+                id="resetEmail"
+                type="email"
+                placeholder="nama@email.com"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowForgotPassword(false)}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={resetPasswordLoading}>
+                {resetPasswordLoading ? "Mengirim..." : "Kirim Link Reset"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
 
 export default Auth;

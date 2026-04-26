@@ -352,11 +352,11 @@ const TutorProfile = () => {
                   id="hourly_rate"
                   type="number"
                   value={tutorDetails.hourly_rate}
-                  onChange={(e) => setTutorDetails({ ...tutorDetails, hourly_rate: e.target.value })}
-                  placeholder="50000"
-                  className="pl-10"
+                  disabled
+                  className="pl-10 bg-muted"
                 />
               </div>
+              <p className="text-xs text-muted-foreground italic">Tarif hanya dapat diubah oleh Admin</p>
             </div>
 
             <div className="flex items-center space-x-2">

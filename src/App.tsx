@@ -21,6 +21,8 @@ import AdminAttendance from "./pages/admin/Attendance";
 import AdminMap from "./pages/admin/Map";
 import AdminSubjects from "./pages/admin/Subjects";
 import AdminEnrol from "./pages/admin/Enrol";
+import AdminTutorApproval from "./pages/admin/TutorApproval";
+import TutorPendingApproval from "./pages/tutor/PendingApproval";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +51,7 @@ const App = () => (
             <Route path="attendance" element={<TutorAttendance />} />
             <Route path="students" element={<TutorStudents />} />
             <Route path="profile" element={<TutorProfile />} />
+            <Route path="pending" element={<TutorPendingApproval />} />
           </Route>
 
           {/* Admin Routes */}
@@ -60,6 +63,7 @@ const App = () => (
             <Route path="map" element={<AdminMap />} />
             <Route path="subjects" element={<AdminSubjects />} />
             <Route path="enrol" element={<AdminEnrol />} />
+            <Route path="tutor-approval" element={<AdminTutorApproval />} />
           </Route>
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

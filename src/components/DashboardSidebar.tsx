@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, Users, Calendar, MapPin, LogOut, User, GraduationCap, X } from "lucide-react";
+import { Home, Users, Calendar, MapPin, LogOut, User, GraduationCap, X, BookOpen, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -21,6 +21,8 @@ const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onM
     { title: "Semua Siswa", url: "/admin/students", icon: User },
     { title: "Laporan Absensi", url: "/admin/attendance", icon: Calendar },
     { title: "Peta Lokasi", url: "/admin/map", icon: MapPin },
+    { title: "Mata Pelajaran", url: "/admin/subjects", icon: BookOpen },
+    { title: "Enrol Siswa", url: "/admin/enrol", icon: UserPlus },
   ];
 
   const tutorItems = [

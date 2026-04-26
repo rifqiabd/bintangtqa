@@ -4,6 +4,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { MapPin, Star, Search, User, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +37,12 @@ interface TutorData {
   distance?: number;
 }
 
+interface Subject {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
 const parseSubjects = (subjects: any): string[] => {
   if (Array.isArray(subjects)) return subjects;
   if (typeof subjects === 'string') {
@@ -37,13 +58,37 @@ const parseSubjects = (subjects: any): string[] => {
 const FindTutors = () => {
   const navigate = useNavigate();
   const [tutors, setTutors] = useState<TutorData[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [subjectFilter, setSubjectFilter] = useState("all");
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+  // Enroll modal
+  const [showEnrollDialog, setShowEnrollDialog] = useState(false);
+  const [selectedTutor, setSelectedTutor] = useState<TutorData | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [enrolling, setEnrolling] = useState(false);
+
   useEffect(() => {
+    loadSubjects();
     loadTutors();
   }, []);
+
+  const loadSubjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("subjects")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setSubjects(data || []);
+    } catch (error) {
+      console.error("Error loading subjects:", error);
+    }
+  };
 
   const loadTutors = async () => {
     setLoading(true);
@@ -161,27 +206,43 @@ const FindTutors = () => {
 
   const filteredTutors = tutors.filter((tutor) => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = 
       tutor.full_name.toLowerCase().includes(query) ||
       tutor.subjects.some((subject) => subject.toLowerCase().includes(query)) ||
-      tutor.address.toLowerCase().includes(query)
-    );
+      tutor.address.toLowerCase().includes(query);
+    
+    const matchesSubject = subjectFilter === "all" || 
+      tutor.subjects.some(s => s.toLowerCase().includes(subjectFilter.toLowerCase()));
+    
+    return matchesSearch && matchesSubject;
   });
 
-  const handleEnroll = async (tutorId: string, tutorName: string) => {
+  const handleEnrollClick = (tutor: TutorData) => {
+    setSelectedTutor(tutor);
+    setSelectedSubject("");
+    setShowEnrollDialog(true);
+  };
+
+  const handleEnroll = async () => {
+    if (!selectedSubject) {
+      toast.error("Pilih mata pelajaran terlebih dahulu");
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error("Silakan login terlebih dahulu");
       return;
     }
 
+    setEnrolling(true);
     try {
       // Check if already enrolled
       const { data: existing } = await supabase
         .from("enrollments")
         .select("id")
         .eq("student_id", user.id)
-        .eq("tutor_id", tutorId)
+        .eq("tutor_id", selectedTutor?.id)
         .single();
 
       if (existing) {
@@ -191,19 +252,21 @@ const FindTutors = () => {
 
       const { error } = await supabase.from("enrollments").insert({
         student_id: user.id,
-        tutor_id: tutorId,
-        subject: "matematika",
-        status: "active",
+        tutor_id: selectedTutor?.id,
+        subject: selectedSubject,
+        status: "pending",
       });
 
       if (error) throw error;
-      toast.success(`Berhasil mendaftar dengan ${tutorName}!`);
+      toast.success(`Berhasil mengajukan pendaftaran ke ${selectedTutor?.full_name}! Menunggu persetujuan tutor.`);
       
-      // Refresh tutors
-      setTimeout(() => loadTutors(), 1000);
+      setShowEnrollDialog(false);
+      setSelectedTutor(null);
     } catch (error) {
       console.error("Error enrolling:", error);
       toast.error("Gagal mendaftar");
+    } finally {
+      setEnrolling(false);
     }
   };
 
@@ -240,7 +303,7 @@ const FindTutors = () => {
         )}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -250,6 +313,19 @@ const FindTutors = () => {
             className="pl-10"
           />
         </div>
+        <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Semua Mata Pelajaran" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Mata Pelajaran</SelectItem>
+            {subjects.map((subject) => (
+              <SelectItem key={subject.id} value={subject.name}>
+                {subject.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {filteredTutors.length === 0 ? (
@@ -258,7 +334,7 @@ const FindTutors = () => {
             <User className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Belum Ada Tutor</h3>
             <p className="text-muted-foreground">
-              {searchQuery 
+              {searchQuery || subjectFilter !== "all"
                 ? "Tidak ada tutor yang cocok dengan pencarian Anda" 
                 : "Belum ada tutor yang terdaftar di sistem"}
             </p>
@@ -339,7 +415,7 @@ const FindTutors = () => {
                 )}
 
                 <Button 
-                  onClick={() => handleEnroll(tutor.id, tutor.full_name)} 
+                  onClick={() => handleEnrollClick(tutor)} 
                   className="w-full"
                 >
                   Daftar Sekarang
@@ -349,6 +425,49 @@ const FindTutors = () => {
           ))}
         </div>
       )}
+
+      {/* Enroll Dialog */}
+      <Dialog open={showEnrollDialog} onOpenChange={setShowEnrollDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Daftar ke Tutor</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tutor</Label>
+              <Input value={selectedTutor?.full_name || ""} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label>Pilih Mata Pelajaran</Label>
+              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih mata pelajaran..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects.filter(s => 
+                    selectedTutor?.subjects.some(ts => 
+                      ts.toLowerCase().includes(s.name.toLowerCase()) ||
+                      s.name.toLowerCase().includes(ts.toLowerCase())
+                    )
+                  ).map((subject) => (
+                    <SelectItem key={subject.id} value={subject.name}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEnrollDialog(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleEnroll} disabled={enrolling || !selectedSubject}>
+              {enrolling ? "Mendaftarkan..." : "Daftar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

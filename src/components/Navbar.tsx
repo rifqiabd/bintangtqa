@@ -1,12 +1,47 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { BookOpen, Menu, X, UserCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
+        setUserRole(data?.role || null);
+      }
+    } catch (error) {
+      console.error("Error checking auth:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDashboardClick = () => {
+    if (userRole === "admin") {
+      navigate("/admin");
+    } else if (userRole === "tutor") {
+      navigate("/tutor");
+    } else {
+      navigate("/student");
+    }
+  };
 
   const menuItems = [
     { label: "Beranda", href: "#home" },
@@ -57,20 +92,33 @@ const Navbar = () => {
 
             {/* Desktop Action Buttons */}
             <div className="hidden sm:flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => navigate("/auth?role=student")}
-              >
-                Daftar Siswa
-              </Button>
-              <Button 
-                size="sm"
-                onClick={() => navigate("/auth?role=tutor")}
-                className="bg-gradient-to-r from-accent to-accent/90 hover:from-accent/90 hover:to-accent/80"
-              >
-                Daftar Tutor
-              </Button>
+              {loading ? null : userRole ? (
+                <Button 
+                  size="sm"
+                  onClick={handleDashboardClick}
+                  className="bg-gradient-to-r from-accent to-accent/90 hover:from-accent/90 hover:to-accent/80"
+                >
+                  <UserCircle2 className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate("/auth?role=student")}
+                  >
+                    Daftar Siswa
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={() => navigate("/auth?role=tutor")}
+                    className="bg-gradient-to-r from-accent to-accent/90 hover:from-accent/90 hover:to-accent/80"
+                  >
+                    Daftar Tutor
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -123,25 +171,40 @@ const Navbar = () => {
 
           {/* Mobile Action Buttons */}
           <div className="flex flex-col gap-3 pt-4 border-t">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                navigate("/auth?role=student");
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full"
-            >
-              Daftar Siswa
-            </Button>
-            <Button 
-              onClick={() => {
-                navigate("/auth?role=tutor");
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full bg-gradient-to-r from-accent to-accent/90 hover:from-accent/90 hover:to-accent/80"
-            >
-              Daftar Tutor
-            </Button>
+            {loading ? null : userRole ? (
+              <Button 
+                onClick={() => {
+                  handleDashboardClick();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full bg-gradient-to-r from-accent to-accent/90 hover:from-accent/90 hover:to-accent/80"
+              >
+                <UserCircle2 className="mr-2 h-4 w-4" />
+                Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    navigate("/auth?role=student");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full"
+                >
+                  Daftar Siswa
+                </Button>
+                <Button 
+                  onClick={() => {
+                    navigate("/auth?role=tutor");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full bg-gradient-to-r from-accent to-accent/90 hover:from-accent/90 hover:to-accent/80"
+                >
+                  Daftar Tutor
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

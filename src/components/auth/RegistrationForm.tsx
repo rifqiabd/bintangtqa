@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MapPin, FileText, GraduationCap } from "lucide-react";
 import type { Subject } from "@/lib/queries/subjectQueries";
 import { getSubjects } from "@/lib/queries/subjectQueries";
+import { SchoolPicker } from "@/components/SchoolPicker";
 
 interface RegistrationFormProps {
   role: "student" | "tutor";
@@ -21,6 +22,8 @@ interface RegistrationFormProps {
   setAddress: (value: string) => void;
   location: { lat: number; lng: number } | null;
   locationError: string;
+  schoolName: string;
+  setSchoolName: (value: string) => void;
   subjects: string[];
   setSubjects: (subjects: string[]) => void;
   experience: string;
@@ -58,6 +61,8 @@ export function RegistrationForm({
   setAddress,
   location,
   locationError,
+  schoolName,
+  setSchoolName,
   subjects,
   setSubjects,
   experience,
@@ -150,6 +155,15 @@ export function RegistrationForm({
         <Label htmlFor="phone">Nomor HP</Label>
         <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
       </div>
+      {role === "student" && (
+        <div className="space-y-2">
+          <Label>Asal Sekolah (Opsional)</Label>
+          <div className="flex gap-2">
+            <SchoolPicker value={schoolName} onChange={setSchoolName} />
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="address">Alamat</Label>
         <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />

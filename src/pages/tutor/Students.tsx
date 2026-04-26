@@ -4,8 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Phone, Mail, MapPin, BookOpen, User, Check, X } from "lucide-react";
+import { Phone, Mail, MapPin, BookOpen, User, Check, X, Navigation, MapIcon } from "lucide-react";
 import { toast } from "sonner";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { Input } from "@/components/ui/input";
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+const studentIcon = new L.Icon({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  className: "bg-green-500 rounded-full",
+});
 
 interface Enrollment {
   id: string;
@@ -17,7 +35,18 @@ interface Enrollment {
     email: string;
     phone: string;
     address: string;
+    latitude: number | null;
+    longitude: number | null;
   };
+}
+
+interface StudentLocation {
+  id: string;
+  full_name: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  phone: string;
 }
 
 const TutorStudents = () => {
@@ -25,6 +54,9 @@ const TutorStudents = () => {
   const [pendingRequests, setPendingRequests] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<StudentLocation | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     loadStudents();
@@ -46,7 +78,9 @@ const TutorStudents = () => {
             full_name,
             email,
             phone,
-            address
+            address,
+            latitude,
+            longitude
           )
         `)
         .eq("tutor_id", user.id)
@@ -89,18 +123,23 @@ const TutorStudents = () => {
     try {
       const { error } = await supabase
         .from("enrollments")
-        .update({ status: "rejected" })
+        .delete()
         .eq("id", enrollmentId);
 
       if (error) throw error;
-      toast.success("Pendaftaran ditolak");
+      toast.success("Pendaftaran berhasil dihapus!");
       loadStudents();
     } catch (error) {
-      console.error("Error rejecting:", error);
-      toast.error("Gagal menolak pendaftaran");
+      console.error("Error deleting enrollment:", error);
+      toast.error("Gagal menghapus pendaftaran");
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const openGoogleMaps = (lat: number, lng: number, name: string) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(url, "_blank");
   };
 
   const getStatusColor = (status: string) => {
@@ -156,6 +195,10 @@ const TutorStudents = () => {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="map" onClick={() => setShowMap(true)}>
+            <MapIcon className="h-4 w-4 mr-1" />
+            Peta Siswa
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="active">
@@ -205,6 +248,17 @@ const TutorStudents = () => {
                       <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                       <span className="line-clamp-2">{enrollment.student.address || "Alamat tidak tersedia"}</span>
                     </div>
+                    {enrollment.student.latitude && enrollment.student.longitude && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => openGoogleMaps(enrollment.student.latitude!, enrollment.student.longitude!, enrollment.student.full_name)}
+                      >
+                        <Navigation className="h-4 w-4 mr-1" />
+                        Rute ke Google Maps
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -285,6 +339,115 @@ const TutorStudents = () => {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="map">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <CardTitle className="flex items-center gap-2">
+                  <MapIcon className="h-5 w-5" />
+                  Peta Lokasi Siswa
+                </CardTitle>
+                <Input
+                  placeholder="Cari nama siswa..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-xs"
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const studentsWithLocation = students.filter(
+                  s => s.student.latitude && s.student.longitude
+                );
+                const filteredStudents = studentsWithLocation.filter(s =>
+                  s.student.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+
+                if (studentsWithLocation.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 h-[400px]">
+                      <MapIcon className="h-16 w-16 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">
+                        Tidak Ada Lokasi Siswa
+                      </h3>
+                      <p className="text-muted-foreground text-center">
+                        Siswa belum mengisi lokasi di profil mereka
+                      </p>
+                    </div>
+                  );
+                }
+
+                const mapCenter: [number, number] = filteredStudents.length > 0
+                  ? [filteredStudents[0].student.latitude!, filteredStudents[0].student.longitude!]
+                  : [-6.2, 106.816666];
+
+                return (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline">
+                        {filteredStudents.length} siswa dengan lokasi
+                      </Badge>
+                    </div>
+                    <div className="h-[500px] rounded-lg overflow-hidden border relative z-0">
+                      <MapContainer
+                        center={mapCenter}
+                        zoom={12}
+                        style={{ height: "100%", width: "100%", zIndex: 0 }}
+                      >
+                        <TileLayer
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        {filteredStudents.map((enrollment) => (
+                          <Marker
+                            key={enrollment.id}
+                            position={[
+                              enrollment.student.latitude!,
+                              enrollment.student.longitude!,
+                            ]}
+                            icon={studentIcon}
+                          >
+                            <Popup>
+                              <div className="p-2 min-w-[200px]">
+                                <div className="font-semibold">{enrollment.student.full_name}</div>
+                                <div className="flex items-start gap-1 text-sm mt-1">
+                                  <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                                  <span className="line-clamp-2">
+                                    {enrollment.student.address || "Alamat tidak tersedia"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 text-sm mt-1">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{enrollment.student.phone}</span>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  className="w-full mt-2"
+                                  onClick={() =>
+                                    openGoogleMaps(
+                                      enrollment.student.latitude!,
+                                      enrollment.student.longitude!,
+                                      enrollment.student.full_name
+                                    )
+                                  }
+                                >
+                                  <Navigation className="h-3 w-3 mr-1" />
+                                  Rute ke Google Maps
+                                </Button>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        ))}
+                      </MapContainer>
+                    </div>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

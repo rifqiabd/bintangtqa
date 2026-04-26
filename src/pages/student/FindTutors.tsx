@@ -6,13 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -37,12 +30,6 @@ interface TutorData {
   distance?: number;
 }
 
-interface Subject {
-  id: string;
-  name: string;
-  is_active: boolean;
-}
-
 const parseSubjects = (subjects: any): string[] => {
   if (Array.isArray(subjects)) return subjects;
   if (typeof subjects === 'string') {
@@ -58,37 +45,18 @@ const parseSubjects = (subjects: any): string[] => {
 const FindTutors = () => {
   const navigate = useNavigate();
   const [tutors, setTutors] = useState<TutorData[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [subjectFilter, setSubjectFilter] = useState("all");
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Enroll modal
   const [showEnrollDialog, setShowEnrollDialog] = useState(false);
   const [selectedTutor, setSelectedTutor] = useState<TutorData | null>(null);
-  const [selectedSubject, setSelectedSubject] = useState("");
   const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
-    loadSubjects();
     loadTutors();
   }, []);
-
-  const loadSubjects = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("subjects")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
-      setSubjects(data || []);
-    } catch (error) {
-      console.error("Error loading subjects:", error);
-    }
-  };
 
   const loadTutors = async () => {
     setLoading(true);
@@ -208,30 +176,25 @@ const FindTutors = () => {
     const query = searchQuery.toLowerCase();
     const matchesSearch = 
       tutor.full_name.toLowerCase().includes(query) ||
-      tutor.subjects.some((subject) => subject.toLowerCase().includes(query)) ||
       tutor.address.toLowerCase().includes(query);
     
-    const matchesSubject = subjectFilter === "all" || 
-      tutor.subjects.some(s => s.toLowerCase().includes(subjectFilter.toLowerCase()));
-    
-    return matchesSearch && matchesSubject;
+    return matchesSearch;
   });
 
   const handleEnrollClick = (tutor: TutorData) => {
     setSelectedTutor(tutor);
-    setSelectedSubject("");
     setShowEnrollDialog(true);
   };
 
   const handleEnroll = async () => {
-    if (!selectedSubject) {
-      toast.error("Pilih mata pelajaran terlebih dahulu");
-      return;
-    }
-
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error("Silakan login terlebih dahulu");
+      return;
+    }
+
+    if (!selectedTutor) {
+      toast.error("Tutor tidak dipilih.");
       return;
     }
 
@@ -242,7 +205,7 @@ const FindTutors = () => {
         .from("enrollments")
         .select("id")
         .eq("student_id", user.id)
-        .eq("tutor_id", selectedTutor?.id)
+        .eq("tutor_id", selectedTutor.id)
         .single();
 
       if (existing) {
@@ -252,8 +215,7 @@ const FindTutors = () => {
 
       const { error } = await supabase.from("enrollments").insert({
         student_id: user.id,
-        tutor_id: selectedTutor?.id,
-        subject: selectedSubject,
+        tutor_id: selectedTutor.id,
         status: "pending",
       });
 
@@ -307,25 +269,12 @@ const FindTutors = () => {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Cari berdasarkan nama, mata pelajaran, atau lokasi..."
+            placeholder="Cari berdasarkan nama atau lokasi..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
         </div>
-        <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Semua Mata Pelajaran" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Mata Pelajaran</SelectItem>
-            {subjects.map((subject) => (
-              <SelectItem key={subject.id} value={subject.name}>
-                {subject.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {filteredTutors.length === 0 ? (
@@ -334,7 +283,7 @@ const FindTutors = () => {
             <User className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Belum Ada Tutor</h3>
             <p className="text-muted-foreground">
-              {searchQuery || subjectFilter !== "all"
+              {searchQuery
                 ? "Tidak ada tutor yang cocok dengan pencarian Anda" 
                 : "Belum ada tutor yang terdaftar di sistem"}
             </p>
@@ -437,32 +386,15 @@ const FindTutors = () => {
               <Label>Tutor</Label>
               <Input value={selectedTutor?.full_name || ""} disabled />
             </div>
-            <div className="space-y-2">
-              <Label>Pilih Mata Pelajaran</Label>
-              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih mata pelajaran..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjects.filter(s => 
-                    selectedTutor?.subjects.some(ts => 
-                      ts.toLowerCase().includes(s.name.toLowerCase()) ||
-                      s.name.toLowerCase().includes(ts.toLowerCase())
-                    )
-                  ).map((subject) => (
-                    <SelectItem key={subject.id} value={subject.name}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Klik "Daftar" untuk mengajukan pendaftaran. Tutor akan meninjau dan menyetujui permintaan Anda.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEnrollDialog(false)}>
               Batal
             </Button>
-            <Button onClick={handleEnroll} disabled={enrolling || !selectedSubject}>
+            <Button onClick={handleEnroll} disabled={enrolling}>
               {enrolling ? "Mendaftarkan..." : "Daftar"}
             </Button>
           </DialogFooter>

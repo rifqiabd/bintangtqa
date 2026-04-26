@@ -243,7 +243,7 @@ const AdminMap = () => {
                             {loc.address}
                           </div>
                         )}
-                        {loc.subjects && loc.subjects.length > 0 && (
+                        {Array.isArray(loc.subjects) && loc.subjects.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {loc.subjects.slice(0, 3).map((s) => (
                               <Badge key={s} variant="outline">

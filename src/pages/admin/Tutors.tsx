@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -20,8 +23,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Users, Mail, Phone, MapPin, BookOpen, Eye, Power } from "lucide-react";
+import { Search, Users, Mail, Phone, MapPin, BookOpen, Eye, Power, Pencil } from "lucide-react";
 import { toast } from "sonner";
+
+const subjectOptions = [
+  { value: "matematika", label: "Matematika" },
+  { value: "fisika", label: "Fisika" },
+  { value: "kimia", label: "Kimia" },
+  { value: "biologi", label: "Biologi" },
+  { value: "bahasa_indonesia", label: "Bahasa Indonesia" },
+  { value: "bahasa_inggris", label: "Bahasa Inggris" },
+  { value: "ekonomi", label: "Ekonomi" },
+  { value: "akuntansi", label: "Akuntansi" },
+  { value: "sejarah", label: "Sejarah" },
+  { value: "geografi", label: "Geografi" },
+  { value: "sosiologi", label: "Sosiologi" },
+  { value: "pkn", label: "PKN" },
+];
 
 interface Tutor {
   id: string;
@@ -29,6 +47,8 @@ interface Tutor {
   email: string;
   phone: string;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
   tutor_details: {
     subjects: string[];
@@ -44,6 +64,19 @@ const AdminTutors = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingTutor, setEditingTutor] = useState({
+    full_name: "",
+    phone: "",
+    address: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
+    subjects: [] as string[],
+    experience: "",
+    hourly_rate: "",
+    is_available: true,
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     loadTutors();
@@ -52,6 +85,8 @@ const AdminTutors = () => {
   const loadTutors = async () => {
     try {
       setLoading(true);
+      
+      // Get all tutors from user_roles
       const { data: tutorUsers, error: tutorError } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -66,7 +101,8 @@ const AdminTutors = () => {
 
       const tutorIds = tutorUsers.map((t) => t.user_id);
 
-      const { data, error } = await supabase
+      // Get profiles
+      const { data: profilesData, error } = await supabase
         .from("profiles")
         .select(`
           id,
@@ -74,19 +110,44 @@ const AdminTutors = () => {
           email,
           phone,
           address,
-          created_at,
-          tutor_details (
-            subjects,
-            experience,
-            is_available,
-            hourly_rate
-          )
+          latitude,
+          longitude,
+          created_at
         `)
         .in("id", tutorIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setTutors(data || []);
+
+      // Get tutor_details using bypass function
+      const { data: tutorDetailsData, error: tdError } = await supabase.rpc('admin_get_all_tutor_details');
+
+      // Merge data - parse subjects from TEXT (string) to array
+      const mergedData = (profilesData || []).map((profile) => {
+        const td = tutorDetailsData?.find((td: any) => td.tutor_id === profile.id);
+        let subjects: string[] = [];
+        
+        if (td?.subjects) {
+          try {
+            // subjects is now TEXT, parse JSON string to array
+            subjects = JSON.parse(td.subjects);
+          } catch {
+            subjects = [];
+          }
+        }
+        
+        return {
+          ...profile,
+          tutor_details: td ? {
+            subjects,
+            experience: td.experience,
+            is_available: td.is_available,
+            hourly_rate: td.hourly_rate
+          } : null
+        };
+      });
+
+      setTutors(mergedData);
     } catch (error) {
       console.error("Error loading tutors:", error);
       toast.error("Gagal memuat data tutor");
@@ -122,6 +183,96 @@ const AdminTutors = () => {
       console.error("Error updating tutor status:", error);
       toast.error("Gagal mengupdate status tutor");
     }
+  };
+
+  const openEditDialog = (tutor: Tutor) => {
+    setEditingTutor({
+      full_name: tutor.full_name,
+      phone: tutor.phone,
+      address: tutor.address || "",
+      latitude: tutor.latitude,
+      longitude: tutor.longitude,
+      subjects: tutor.tutor_details?.subjects || [],
+      experience: tutor.tutor_details?.experience || "",
+      hourly_rate: tutor.tutor_details?.hourly_rate?.toString() || "",
+      is_available: tutor.tutor_details?.is_available ?? true,
+    });
+    setSelectedTutor(tutor);
+    setEditOpen(true);
+  };
+
+  const handleEditTutor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingEdit(true);
+
+    try {
+      if (!selectedTutor) return;
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          full_name: editingTutor.full_name,
+          phone: editingTutor.phone,
+          address: editingTutor.address,
+          latitude: editingTutor.latitude,
+          longitude: editingTutor.longitude,
+        })
+        .eq("id", selectedTutor.id);
+
+      if (profileError) throw profileError;
+
+      const { error: detailsError } = await supabase
+        .from("tutor_details")
+        .upsert({
+          tutor_id: selectedTutor.id,
+          subjects: editingTutor.subjects as any,
+          experience: editingTutor.experience,
+          hourly_rate: editingTutor.hourly_rate ? parseFloat(editingTutor.hourly_rate) : null,
+          is_available: editingTutor.is_available,
+        }, {
+          onConflict: "tutor_id",
+        });
+
+      if (detailsError) throw detailsError;
+
+      toast.success("Tutor berhasil diperbarui");
+      setEditOpen(false);
+      loadTutors();
+    } catch (error) {
+      console.error("Error updating tutor:", error);
+      toast.error("Gagal memperbarui tutor");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setEditingTutor({
+            ...editingTutor,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          toast.success("Lokasi berhasil didapatkan");
+        },
+        () => {
+          toast.error("Gagal mendapatkan lokasi");
+        }
+      );
+    } else {
+      toast.error("Browser tidak mendukung geolokasi");
+    }
+  };
+
+  const toggleSubject = (subjectValue: string) => {
+    setEditingTutor((prev) => ({
+      ...prev,
+      subjects: prev.subjects.includes(subjectValue)
+        ? prev.subjects.filter((s) => s !== subjectValue)
+        : [...prev.subjects, subjectValue],
+    }));
   };
 
   const filteredTutors = tutors.filter(
@@ -275,6 +426,14 @@ const AdminTutors = () => {
                             <Power className="h-4 w-4 mr-1" />
                             {tutor.tutor_details?.is_available ? "Nonaktifkan" : "Aktifkan"}
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(tutor)}
+                          >
+                            <Pencil className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -389,6 +548,114 @@ const AdminTutors = () => {
               </Button>
             )}
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Tutor</DialogTitle>
+            <DialogDescription>
+              Edit informasi tutor
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditTutor} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="editFullName">Nama Lengkap</Label>
+              <Input
+                id="editFullName"
+                value={editingTutor.full_name}
+                onChange={(e) => setEditingTutor({ ...editingTutor, full_name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editPhone">Nomor HP</Label>
+              <Input
+                id="editPhone"
+                value={editingTutor.phone}
+                onChange={(e) => setEditingTutor({ ...editingTutor, phone: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editAddress">Alamat</Label>
+              <Textarea
+                id="editAddress"
+                value={editingTutor.address}
+                onChange={(e) => setEditingTutor({ ...editingTutor, address: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Lokasi</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={
+                    editingTutor.latitude && editingTutor.longitude
+                      ? `${editingTutor.latitude.toFixed(6)}, ${editingTutor.longitude?.toFixed(6)}`
+                      : "Belum diset"
+                  }
+                  disabled
+                  className="bg-muted"
+                />
+                <Button type="button" variant="outline" onClick={getCurrentLocation}>
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Dapatkan Lokasi
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Mata Pelajaran</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {subjectOptions.map((subject) => (
+                  <div key={subject.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-${subject.value}`}
+                      checked={editingTutor.subjects.includes(subject.value)}
+                      onCheckedChange={() => toggleSubject(subject.value)}
+                    />
+                    <label htmlFor={`edit-${subject.value}`} className="text-sm">
+                      {subject.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editExperience">Pengalaman</Label>
+              <Textarea
+                id="editExperience"
+                value={editingTutor.experience}
+                onChange={(e) => setEditingTutor({ ...editingTutor, experience: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editRate">Tarif per Jam (Rp)</Label>
+              <Input
+                id="editRate"
+                type="number"
+                value={editingTutor.hourly_rate}
+                onChange={(e) => setEditingTutor({ ...editingTutor, hourly_rate: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="editAvailable"
+                checked={editingTutor.is_available}
+                onCheckedChange={(checked) => setEditingTutor({ ...editingTutor, is_available: !!checked })}
+              />
+              <label htmlFor="editAvailable">Tersedia untuk mengajar</label>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={savingEdit}>
+                {savingEdit ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

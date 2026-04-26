@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Check for OAuth errors in URL
   useEffect(() => {
@@ -70,6 +72,10 @@ const Auth = () => {
   const [address, setAddress] = useState("");
   const [subjects, setSubjects] = useState<string[]>([]);
   const [experience, setExperience] = useState("");
+  
+  // Forgot password form
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
 
   const subjectOptions = [
     { value: "matematika", label: "Matematika" },
@@ -112,6 +118,31 @@ const Auth = () => {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Login dengan Google gagal");
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetPasswordLoading(true);
+    
+    try {
+      if (!resetEmail.trim()) {
+        throw new Error("Email harus diisi");
+      }
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Link reset password telah dikirim ke email Anda");
+      setShowForgotPassword(false);
+      setResetEmail("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal mengirim link reset password");
+    } finally {
+      setResetPasswordLoading(false);
     }
   };
 
@@ -351,7 +382,16 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <button
+                      type="button"
+                      className="text-sm text-primary hover:underline"
+                      onClick={() => setShowForgotPassword(true)}
+                    >
+                      Lupa password?
+                    </button>
+                  </div>
                   <Input
                     id="password"
                     type="password"
@@ -516,10 +556,47 @@ const Auth = () => {
               </form>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
+</CardContent>
+        </Card>
+        
+        {/* Forgot Password Dialog */}
+        <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Lupa Password</DialogTitle>
+              <DialogDescription>
+                Masukkan email Anda untuk menerima link reset password.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="resetEmail">Email</Label>
+                <Input
+                  id="resetEmail"
+                  type="email"
+                  placeholder="nama@email.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowForgotPassword(false)}
+                >
+                  Batal
+                </Button>
+                <Button type="submit" disabled={resetPasswordLoading}>
+                  {resetPasswordLoading ? "Mengirim..." : "Kirim Link Reset"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  };
 
 export default Auth;

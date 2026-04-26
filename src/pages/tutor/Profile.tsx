@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { User, Mail, Phone, MapPin, Save, BookOpen, DollarSign } from "lucide-react";
+import { User, Mail, Phone, MapPin, Save, BookOpen, DollarSign, Lock } from "lucide-react";
 
 const subjects = [
   { value: "matematika", label: "Matematika" },
@@ -41,6 +42,13 @@ const TutorProfile = () => {
     hourly_rate: "",
     is_available: true,
   });
+  
+  // Change password state
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -158,6 +166,49 @@ const TutorProfile = () => {
       );
     } else {
       toast.error("Browser tidak mendukung geolokasi");
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangingPassword(true);
+    
+    try {
+      if (newPassword.length < 8) {
+        throw new Error("Password baru minimal 8 karakter");
+      }
+      
+      if (newPassword !== confirmPassword) {
+        throw new Error("Password baru tidak cocok");
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User tidak ditemukan");
+      
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: user.email || profile.email,
+        password: currentPassword,
+      });
+      
+      if (verifyError) {
+        throw new Error("Password lama salah");
+      }
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Password berhasil diubah");
+      setShowPasswordDialog(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal mengubah password");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -328,7 +379,73 @@ const TutorProfile = () => {
           <Save className="h-4 w-4 mr-2" />
           {saving ? "Menyimpan..." : "Simpan Perubahan"}
         </Button>
+        
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => setShowPasswordDialog(true)}
+        >
+          <Lock className="h-4 w-4 mr-2" />
+          Ubah Password
+        </Button>
       </form>
+      
+      {/* Change Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ubah Password</DialogTitle>
+            <DialogDescription>
+              Masukkan password lama dan password baru Anda.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tutorCurrentPassword">Password Lama</Label>
+              <Input
+                id="tutorCurrentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tutorNewPassword">Password Baru</Label>
+              <Input
+                id="tutorNewPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tutorConfirmPassword">Konfirmasi Password Baru</Label>
+              <Input
+                id="tutorConfirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowPasswordDialog(false)}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={changingPassword}>
+                {changingPassword ? "Mengubah..." : "Ubah Password"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

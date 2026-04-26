@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -20,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, User, Mail, Phone, MapPin, BookOpen, Eye, GraduationCap } from "lucide-react";
+import { Search, User, Mail, Phone, MapPin, BookOpen, Eye, GraduationCap, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 interface Student {
@@ -29,6 +31,8 @@ interface Student {
   email: string;
   phone: string;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
   enrollments?: {
     id: string;
@@ -44,6 +48,15 @@ const AdminStudents = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState({
+    full_name: "",
+    phone: "",
+    address: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     loadStudents();
@@ -66,32 +79,91 @@ const AdminStudents = () => {
 
       const studentIds = studentUsers.map((s) => s.user_id);
 
-      const { data, error } = await supabase
+      const { data: profilesData, error } = await supabase
         .from("profiles")
-        .select(`
-          id,
-          full_name,
-          email,
-          phone,
-          address,
-          created_at,
-          enrollments (
-            id,
-            tutor_id,
-            subject,
-            status
-          )
-        `)
+        .select("id, full_name, email, phone, address, latitude, longitude, created_at")
         .in("id", studentIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setStudents(data || []);
+      
+      // Get enrollments using bypass function
+      const { data: enrollmentsData } = await supabase.rpc('admin_get_all_enrollments');
+
+      const studentsWithEnrollments: Student[] = (profilesData || []).map((profile) => ({
+        ...profile,
+        enrollments: (enrollmentsData || []).filter((e: any) => e.student_id === profile.id)
+      }));
+
+      setStudents(studentsWithEnrollments);
     } catch (error) {
       console.error("Error loading students:", error);
       toast.error("Gagal memuat data siswa");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openEditDialog = (student: Student) => {
+    setEditingStudent({
+      full_name: student.full_name,
+      phone: student.phone,
+      address: student.address || "",
+      latitude: student.latitude,
+      longitude: student.longitude,
+    });
+    setSelectedStudent(student);
+    setEditOpen(true);
+  };
+
+  const handleEditStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingEdit(true);
+
+    try {
+      if (!selectedStudent) return;
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          full_name: editingStudent.full_name,
+          phone: editingStudent.phone,
+          address: editingStudent.address,
+          latitude: editingStudent.latitude,
+          longitude: editingStudent.longitude,
+        })
+        .eq("id", selectedStudent.id);
+
+      if (profileError) throw profileError;
+
+      toast.success("Siswa berhasil diperbarui");
+      setEditOpen(false);
+      loadStudents();
+    } catch (error) {
+      console.error("Error updating student:", error);
+      toast.error("Gagal memperbarui siswa");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setEditingStudent({
+            ...editingStudent,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          toast.success("Lokasi berhasil didapatkan");
+        },
+        () => {
+          toast.error("Gagal mendapatkan lokasi");
+        }
+      );
+    } else {
+      toast.error("Browser tidak mendukung geolokasi");
     }
   };
 
@@ -237,6 +309,14 @@ const AdminStudents = () => {
                             <Eye className="h-4 w-4 mr-1" />
                             Lihat
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(student)}
+                          >
+                            <Pencil className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -326,6 +406,72 @@ const AdminStudents = () => {
               Tutup
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Siswa</DialogTitle>
+            <DialogDescription>
+              Edit informasi siswa
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditStudent} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="editFullName">Nama Lengkap</Label>
+              <Input
+                id="editFullName"
+                value={editingStudent.full_name}
+                onChange={(e) => setEditingStudent({ ...editingStudent, full_name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editPhone">Nomor HP</Label>
+              <Input
+                id="editPhone"
+                value={editingStudent.phone}
+                onChange={(e) => setEditingStudent({ ...editingStudent, phone: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editAddress">Alamat</Label>
+              <Textarea
+                id="editAddress"
+                value={editingStudent.address}
+                onChange={(e) => setEditingStudent({ ...editingStudent, address: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Lokasi</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={
+                    editingStudent.latitude && editingStudent.longitude
+                      ? `${editingStudent.latitude.toFixed(6)}, ${editingStudent.longitude?.toFixed(6)}`
+                      : "Belum diset"
+                  }
+                  disabled
+                  className="bg-muted"
+                />
+                <Button type="button" variant="outline" onClick={getCurrentLocation}>
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Dapatkan Lokasi
+                </Button>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={savingEdit}>
+                {savingEdit ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AddressPicker } from "@/components/AddressPicker";
 import { toast } from "sonner";
-import { User, Mail, Phone, MapPin, Save } from "lucide-react";
+import { User, Mail, Phone, MapPin, Save, Lock } from "lucide-react";
 
 const StudentProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -19,6 +21,21 @@ const StudentProfile = () => {
     latitude: null as number | null,
     longitude: null as number | null,
   });
+  
+  // Address region fields
+  const [addressRegion, setAddressRegion] = useState({
+    province_code: "",
+    regency_code: "",
+    district_code: "",
+    village_code: "",
+  });
+  
+  // Change password state
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -38,6 +55,12 @@ const StudentProfile = () => {
       if (error) throw error;
       if (data) {
         setProfile(data);
+        setAddressRegion({
+          province_code: data.province_code || "",
+          regency_code: data.regency_code || "",
+          district_code: data.district_code || "",
+          village_code: data.village_code || "",
+        });
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -61,6 +84,12 @@ const StudentProfile = () => {
           full_name: profile.full_name,
           phone: profile.phone,
           address: profile.address,
+          latitude: profile.latitude,
+          longitude: profile.longitude,
+          province_code: addressRegion.province_code || null,
+          regency_code: addressRegion.regency_code || null,
+          district_code: addressRegion.district_code || null,
+          village_code: addressRegion.village_code || null,
         })
         .eq("id", user.id);
 
@@ -91,6 +120,49 @@ const StudentProfile = () => {
       );
     } else {
       toast.error("Browser tidak mendukung geolokasi");
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangingPassword(true);
+    
+    try {
+      if (newPassword.length < 8) {
+        throw new Error("Password baru minimal 8 karakter");
+      }
+      
+      if (newPassword !== confirmPassword) {
+        throw new Error("Password baru tidak cocok");
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User tidak ditemukan");
+      
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: user.email || profile.email,
+        password: currentPassword,
+      });
+      
+      if (verifyError) {
+        throw new Error("Password lama salah");
+      }
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Password berhasil diubah");
+      setShowPasswordDialog(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal mengubah password");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -181,6 +253,22 @@ const StudentProfile = () => {
             </div>
 
             <div className="space-y-2">
+              <Label>Alamat Wilayah</Label>
+              <Card>
+                <CardContent className="pt-4">
+                  <AddressPicker
+                    value={addressRegion}
+                    onChange={(val) => {
+                      if (val) {
+                        setAddressRegion(val as any);
+                      }
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-2">
               <Label>Lokasi Koordinat</Label>
               <div className="flex gap-2">
                 <Input
@@ -200,9 +288,75 @@ const StudentProfile = () => {
               <Save className="h-4 w-4 mr-2" />
               {saving ? "Menyimpan..." : "Simpan Perubahan"}
             </Button>
+            
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowPasswordDialog(true)}
+            >
+              <Lock className="h-4 w-4 mr-2" />
+              Ubah Password
+            </Button>
           </form>
         </CardContent>
       </Card>
+      
+      {/* Change Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ubah Password</DialogTitle>
+            <DialogDescription>
+              Masukkan password lama dan password baru Anda.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Password Lama</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">Password Baru</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Konfirmasi Password Baru</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowPasswordDialog(false)}
+              >
+                Batal
+              </Button>
+              <Button type="submit" disabled={changingPassword}>
+                {changingPassword ? "Mengubah..." : "Ubah Password"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

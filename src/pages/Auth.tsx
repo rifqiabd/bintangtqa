@@ -77,6 +77,43 @@ const Auth = () => {
   const [resetEmail, setResetEmail] = useState("");
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
 
+  // Reset password from email link
+  const isResetMode = searchParams.get("reset") === "true";
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newPassword) {
+      toast.error("Password harus diisi");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("Password minimal 8 karakter");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Password tidak cocok");
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
+      if (error) throw error;
+      
+      toast.success("Password berhasil diubah");
+      navigate("/auth");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal reset password");
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
   const subjectOptions = [
     { value: "matematika", label: "Matematika" },
     { value: "fisika", label: "Fisika" },
@@ -340,6 +377,53 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  if (isResetMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
+        <Card className="w-full max-w-lg">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <GraduationCap className="h-12 w-12 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Reset Password</CardTitle>
+            <CardDescription>
+              Masukkan password baru Anda
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Password Baru</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  placeholder="Minimal 8 karakter"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Masukkan password lagi"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={resettingPassword}>
+                {resettingPassword ? "Memproses..." : "Simpan Password"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">

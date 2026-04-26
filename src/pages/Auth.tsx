@@ -40,6 +40,26 @@ const Auth = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState("");
 
+  // Check for OAuth errors in URL
+  useEffect(() => {
+    const error = searchParams.get("error");
+    const errorDescription = searchParams.get("error_description");
+    
+    if (error) {
+      if (error === "state_not_found" || error === "bad_oauth_state") {
+        toast.error("Sesi login Google sudah kadaluarsa. Silakan coba lagi.");
+      } else if (errorDescription) {
+        toast.error(decodeURIComponent(errorDescription.replace(/\+/g, " ")));
+      } else {
+        toast.error("Login dengan Google gagal. Silakan coba lagi.");
+      }
+      
+      // Clean up URL
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
+    }
+  }, [searchParams]);
+
   // Login form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

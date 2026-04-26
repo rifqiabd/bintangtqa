@@ -22,6 +22,18 @@ interface TutorData {
   distance?: number;
 }
 
+const parseSubjects = (subjects: any): string[] => {
+  if (Array.isArray(subjects)) return subjects;
+  if (typeof subjects === 'string') {
+    try {
+      return JSON.parse(subjects);
+    } catch {
+      return subjects.split(',').map((s: string) => s.trim());
+    }
+  }
+  return [];
+};
+
 const FindTutors = () => {
   const navigate = useNavigate();
   const [tutors, setTutors] = useState<TutorData[]>([]);
@@ -108,7 +120,7 @@ const FindTutors = () => {
           address: profile?.address || "Alamat tidak tersedia",
           latitude: profile?.latitude ?? null,
           longitude: profile?.longitude ?? null,
-          subjects: td.subjects || [],
+          subjects: parseSubjects(td.subjects),
           experience: td.experience || "",
           hourly_rate: td.hourly_rate ?? null,
           distance,

@@ -22,6 +22,21 @@ export const loadTutors = async (): Promise<Tutor[]> => {
   if (error) throw error;
 
   const { data: tutorDetailsData } = await supabase.rpc('admin_get_all_tutor_details');
+  const { data: enrollmentsData } = await supabase.rpc('admin_get_all_enrollments');
+
+  // Get subjects to map IDs to names
+  const { data: subjectsData } = await supabase
+    .from("subjects")
+    .select("id, name");
+  
+  const subjectMap = new Map((subjectsData || []).map((s) => [s.id, s.name]));
+
+  // Get student profiles to map student names in enrollments
+  const studentIds = Array.from(new Set((enrollmentsData || []).map((e: any) => e.student_id)));
+  const { data: studentProfiles } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", studentIds);
 
   const mergedData = (profilesData || []).map((profile) => {
     const td = tutorDetailsData?.find((td: any) => td.tutor_id === profile.id);
@@ -29,11 +44,21 @@ export const loadTutors = async (): Promise<Tutor[]> => {
     
     if (td?.subjects) {
       try {
-        subjects = JSON.parse(td.subjects);
+        const parsedSubjects = JSON.parse(td.subjects);
+        // Map subject IDs to names if they are UUIDs
+        subjects = parsedSubjects.map((id: string) => subjectMap.get(id) || id);
       } catch {
         subjects = [];
       }
     }
+
+    const tutorEnrollments = (enrollmentsData || [])
+      .filter((e: any) => e.tutor_id === profile.id)
+      .map((e: any) => ({
+        ...e,
+        student_name: studentProfiles?.find((p) => p.id === e.student_id)?.full_name || "Unknown Student",
+        subject_name: subjectMap.get(e.subject) || e.subject
+      }));
     
     return {
       ...profile,
@@ -42,7 +67,8 @@ export const loadTutors = async (): Promise<Tutor[]> => {
         experience: td.experience,
         is_available: td.is_available,
         hourly_rate: td.hourly_rate
-      } : null
+      } : null,
+      enrollments: tutorEnrollments
     };
   });
 

@@ -24,13 +24,22 @@ export const loadPendingTutors = async (): Promise<PendingTutor[]> => {
     .select("*")
     .in("tutor_id", tutorIds);
 
+  // Get subjects to map IDs to names
+  const { data: subjectsData } = await supabase
+    .from("subjects")
+    .select("id, name");
+  
+  const subjectMap = new Map((subjectsData || []).map((s) => [s.id, s.name]));
+
   const mergedData = (profilesData || []).map((profile) => {
     const td = detailsData?.find((d) => d.tutor_id === profile.id);
     let subjects: string[] = [];
     
     if (td?.subjects) {
       try {
-        subjects = JSON.parse(td.subjects);
+        const parsedSubjects = JSON.parse(td.subjects);
+        // Map IDs to names if they are UUIDs
+        subjects = parsedSubjects.map((id: string) => subjectMap.get(id) || id);
       } catch {
         subjects = [];
       }

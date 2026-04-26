@@ -73,12 +73,17 @@ export function StudentDetailModal({ open, onOpenChange, student }: StudentDetai
                 {(student.enrollments || []).length === 0 ? (
                   <p className="text-sm text-muted-foreground">Belum ada tutor</p>
                 ) : (
-                  student.enrollments?.map((enrollment) => (
-                    <div key={enrollment.id} className="flex items-center gap-2">
-                      <Badge variant="secondary">
-                        {formatSubjectLabel(enrollment.subject)}
-                      </Badge>
-                      <span className="text-sm capitalize">{enrollment.status}</span>
+                  student.enrollments?.map((enrollment: any) => (
+                    <div key={enrollment.id} className="flex flex-col p-2 border rounded gap-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">{enrollment.tutor_name}</span>
+                        <span className="text-xs capitalize px-2 py-0.5 bg-secondary rounded">{enrollment.status}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {formatSubjectLabel(enrollment.subject_name)}
+                        </Badge>
+                      </div>
                     </div>
                   ))
                 )}

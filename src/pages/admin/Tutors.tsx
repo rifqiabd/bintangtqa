@@ -17,6 +17,7 @@ import { TutorDetailModal, TutorEditModal, TutorAddModal } from "@/components/ad
 import { loadTutors, toggleTutorStatus as toggleStatus, addTutor, editTutor } from "@/lib/queries/tutorQueries";
 import type { Tutor, EditingTutor, AddingTutor } from "@/lib/types/tutor";
 import { createEmptyEditingTutor, createEmptyAddingTutor } from "@/lib/types/tutor";
+import { formatSubjectLabel } from "@/lib/constants/subjects";
 
 const AdminTutors = () => {
   const [tutors, setTutors] = useState<Tutor[]>([]);
@@ -219,6 +220,7 @@ const AdminTutors = () => {
                     <TableHead>Nama</TableHead>
                     <TableHead>Kontak</TableHead>
                     <TableHead>Mata Pelajaran</TableHead>
+                    <TableHead>Siswa</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Tgl Daftar</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
@@ -256,7 +258,7 @@ const AdminTutors = () => {
                         <div className="flex flex-wrap gap-1">
                           {tutor.tutor_details?.subjects?.slice(0, 3).map((subject) => (
                             <span key={subject} className="px-2 py-0.5 bg-secondary text-secondary-foreground text-xs rounded">
-                              {subject.replace(/_/g, " ")}
+                              {formatSubjectLabel(subject)}
                             </span>
                           ))}
                           {(tutor.tutor_details?.subjects?.length || 0) > 3 && (
@@ -265,6 +267,25 @@ const AdminTutors = () => {
                             </span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {(tutor.enrollments || []).length === 0 ? (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        ) : (
+                          <div className="flex flex-col gap-1">
+                            {(tutor.enrollments || []).slice(0, 2).map((e: any) => (
+                              <div key={e.id} className="text-xs whitespace-nowrap">
+                                <span className="font-medium">{e.student_name}</span>
+                                <span className="text-muted-foreground ml-1">({formatSubjectLabel(e.subject_name)})</span>
+                              </div>
+                            ))}
+                            {(tutor.enrollments?.length || 0) > 2 && (
+                              <span className="text-[10px] text-muted-foreground italic">
+                                +{(tutor.enrollments?.length || 0) - 2} siswa lainnya
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <span

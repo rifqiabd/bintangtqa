@@ -22,9 +22,29 @@ export const loadStudents = async (): Promise<Student[]> => {
   
   const { data: enrollmentsData } = await supabase.rpc('admin_get_all_enrollments');
 
+  // Get tutor profiles to map tutor names
+  const tutorIds = Array.from(new Set((enrollmentsData || []).map((e: any) => e.tutor_id)));
+  const { data: tutorProfiles } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", tutorIds);
+
+  // Get subjects to map IDs to names
+  const { data: subjectsData } = await supabase
+    .from("subjects")
+    .select("id, name");
+  
+  const subjectMap = new Map((subjectsData || []).map((s) => [s.id, s.name]));
+
   const studentsWithEnrollments: Student[] = (profilesData || []).map((profile) => ({
     ...profile,
-    enrollments: (enrollmentsData || []).filter((e: any) => e.student_id === profile.id)
+    enrollments: (enrollmentsData || [])
+      .filter((e: any) => e.student_id === profile.id)
+      .map((e: any) => ({
+        ...e,
+        tutor_name: tutorProfiles?.find((p) => p.id === e.tutor_id)?.full_name || "Unknown Tutor",
+        subject_name: subjectMap.get(e.subject) || e.subject
+      }))
   }));
 
   return studentsWithEnrollments;

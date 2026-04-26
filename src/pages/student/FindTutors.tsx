@@ -232,7 +232,8 @@ const FindTutors = () => {
     }
   };
 
-  const formatSubject = (subject: string) => {
+  const formatSubject = (subject: string | undefined | null) => {
+    if (!subject) return "";
     return subject.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
   };
 

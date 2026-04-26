@@ -10,7 +10,9 @@ export interface Student {
   enrollments?: {
     id: string;
     tutor_id: string;
+    tutor_name?: string;
     subject: string;
+    subject_name?: string;
     status: string;
   }[];
 }

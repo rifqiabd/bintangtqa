@@ -13,6 +13,13 @@ export interface Tutor {
     is_available: boolean;
     hourly_rate: number;
   } | null;
+  enrollments?: {
+    id: string;
+    student_id: string;
+    student_name?: string;
+    subject: string;
+    status: string;
+  }[];
 }
 
 export interface EditingTutor {

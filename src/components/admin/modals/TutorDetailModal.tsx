@@ -108,6 +108,26 @@ export function TutorDetailModal({ open, onOpenChange, tutor, onToggleStatus }: 
             </div>
           </div>
 
+          <div className="space-y-3">
+            <h3 className="font-semibold">Siswa yang diampu</h3>
+            <div className="space-y-2">
+              {(tutor.enrollments || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">Belum ada siswa yang diampu</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {tutor.enrollments?.map((enrollment: any) => (
+                    <div key={enrollment.id} className="flex items-center justify-between p-2 border rounded text-sm">
+                      <span className="font-medium">{enrollment.student_name}</span>
+                      <Badge variant="outline" className="ml-2">
+                        {formatSubjectLabel(enrollment.subject_name)}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="text-sm text-muted-foreground">
             Tutor sejak: {formatDate(tutor.created_at)}
           </div>

@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { TutorApprovalDetailModal, TutorRejectModal } from "@/components/admin/modals";
 import { loadPendingTutors, approveTutor, rejectTutor } from "@/lib/queries/tutorApprovalQueries";
 import type { PendingTutor } from "@/lib/types/tutorApproval";
+import { formatSubjectLabel } from "@/lib/constants/subjects";
 
 const AdminTutorApproval = () => {
   const [tutors, setTutors] = useState<PendingTutor[]>([]);
@@ -185,7 +186,7 @@ const AdminTutorApproval = () => {
                         <div className="flex flex-wrap gap-1">
                           {(tutor.subjects || []).slice(0, 3).map((subject) => (
                             <Badge key={subject} variant="secondary" className="text-xs">
-                              {subject.replace(/_/g, " ")}
+                              {formatSubjectLabel(subject)}
                             </Badge>
                           ))}
                           {(tutor.subjects?.length || 0) > 3 && (

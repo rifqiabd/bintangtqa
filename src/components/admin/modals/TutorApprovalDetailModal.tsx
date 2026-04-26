@@ -12,6 +12,7 @@ import {
 import { Mail, Phone, MapPin, GraduationCap, FileText, ExternalLink, User, History, Check, X } from "lucide-react";
 import type { PendingTutor, ApprovalHistory } from "@/lib/types/tutorApproval";
 import { getApprovalHistory } from "@/lib/queries/tutorApprovalQueries";
+import { formatSubjectLabel } from "@/lib/constants/subjects";
 
 interface TutorApprovalDetailModalProps {
   open: boolean;
@@ -21,8 +22,6 @@ interface TutorApprovalDetailModalProps {
   onReject: (tutor: PendingTutor) => void;
   loading?: boolean;
 }
-
-const formatSubjectLabel = (value: string) => value.replace(/_/g, " ");
 
 export function TutorApprovalDetailModal({
   open,

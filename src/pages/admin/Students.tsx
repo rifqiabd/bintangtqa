@@ -230,15 +230,16 @@ const AdminStudents = () => {
                         {(student.enrollments || []).length === 0 ? (
                           <span className="text-sm text-muted-foreground">-</span>
                         ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {student.enrollments?.slice(0, 2).map((e) => (
-                              <span key={e.id} className="px-2 py-0.5 bg-secondary text-secondary-foreground text-xs rounded">
-                                {formatSubjectLabel(e.subject)}
-                              </span>
+                          <div className="flex flex-col gap-1">
+                            {student.enrollments?.slice(0, 2).map((e: any) => (
+                              <div key={e.id} className="text-xs whitespace-nowrap">
+                                <span className="font-medium">{e.tutor_name}</span>
+                                <span className="text-muted-foreground ml-1">({formatSubjectLabel(e.subject_name)})</span>
+                              </div>
                             ))}
                             {(student.enrollments?.length || 0) > 2 && (
-                              <span className="px-2 py-0.5 border text-xs rounded">
-                                +{(student.enrollments?.length || 0) - 2}
+                              <span className="text-[10px] text-muted-foreground italic">
+                                +{(student.enrollments?.length || 0) - 2} tutor lainnya
                               </span>
                             )}
                           </div>

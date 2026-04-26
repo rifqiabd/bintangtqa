@@ -7,8 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AddressPicker } from "@/components/AddressPicker";
+import { SchoolPicker } from "@/components/SchoolPicker";
 import { toast } from "sonner";
-import { User, Mail, Phone, MapPin, Save, Lock } from "lucide-react";
+import { User, Mail, Phone, MapPin, Save, Lock, School, BookOpen } from "lucide-react";
+
+const GRADE_OPTIONS = [
+  "TK",
+  "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
+  "SMP Kelas 7", "SMP Kelas 8", "SMP Kelas 9",
+  "SMA Kelas 10", "SMA Kelas 11", "SMA Kelas 12",
+  "Alumni / Umum"
+];
 
 const StudentProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -18,6 +27,8 @@ const StudentProfile = () => {
     email: "",
     phone: "",
     address: "",
+    school_name: "",
+    grade: "",
     latitude: null as number | null,
     longitude: null as number | null,
   });
@@ -50,11 +61,20 @@ const StudentProfile = () => {
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       if (data) {
-        setProfile(data);
+        setProfile({
+          full_name: data.full_name || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          address: data.address || "",
+          school_name: data.school_name || "",
+          grade: data.grade || "",
+          latitude: data.latitude,
+          longitude: data.longitude,
+        });
         setAddressRegion({
           province_code: data.province_code || "",
           regency_code: data.regency_code || "",
@@ -84,6 +104,8 @@ const StudentProfile = () => {
           full_name: profile.full_name,
           phone: profile.phone,
           address: profile.address,
+          school_name: profile.school_name,
+          grade: profile.grade,
           latitude: profile.latitude,
           longitude: profile.longitude,
           province_code: addressRegion.province_code || null,
@@ -235,6 +257,36 @@ const StudentProfile = () => {
                   className="pl-10"
                   required
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="school_name" className="flex items-center gap-2">
+                  <School className="h-4 w-4" /> Asal Sekolah
+                </Label>
+                <SchoolPicker
+                  value={profile.school_name}
+                  onChange={(val) => setProfile({ ...profile, school_name: val })}
+                  placeholder="Cari sekolah..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="grade" className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" /> Kelas
+                </Label>
+                <select
+                  id="grade"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={profile.grade}
+                  onChange={(e) => setProfile({ ...profile, grade: e.target.value })}
+                  required
+                >
+                  <option value="">Pilih Kelas</option>
+                  {GRADE_OPTIONS.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

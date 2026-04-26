@@ -140,6 +140,7 @@ const Auth = () => {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [experience, setExperience] = useState("");
   const [schoolName, setSchoolName] = useState("");
+  const [grade, setGrade] = useState("");
   
   // Tutor document links
   const [ktpLink, setKtpLink] = useState("");
@@ -248,6 +249,7 @@ const Auth = () => {
           graduationYear: role === "tutor" && graduationYear ? parseInt(graduationYear) : undefined,
           ipk: role === "tutor" && ipk ? parseFloat(ipk) : undefined,
           schoolName: role === "student" ? schoolName : undefined,
+          grade: role === "student" ? grade : undefined,
         }
       );
 
@@ -402,6 +404,8 @@ const Auth = () => {
                 setVillageCode={setVillageCode}
                 schoolName={schoolName}
                 setSchoolName={setSchoolName}
+                grade={grade}
+                setGrade={setGrade}
                 location={location}
                 locationError={locationError}
                 subjects={subjects}

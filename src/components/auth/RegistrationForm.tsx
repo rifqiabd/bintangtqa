@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, FileText, GraduationCap, School } from "lucide-react";
+import { MapPin, FileText, GraduationCap, School, BookOpen } from "lucide-react";
 import type { Subject } from "@/lib/queries/subjectQueries";
 import { getSubjects } from "@/lib/queries/subjectQueries";
 import { AddressPicker } from "@/components/AddressPicker";
@@ -31,6 +31,8 @@ interface RegistrationFormProps {
   setVillageCode: (value: string) => void;
   schoolName: string;
   setSchoolName: (value: string) => void;
+  grade: string;
+  setGrade: (value: string) => void;
   location: { lat: number; lng: number } | null;
   locationError: string;
   subjects: string[];
@@ -57,6 +59,14 @@ interface RegistrationFormProps {
   onSubmit: (e: React.FormEvent) => void;
 }
 
+const GRADE_OPTIONS = [
+  "TK",
+  "SD Kelas 1", "SD Kelas 2", "SD Kelas 3", "SD Kelas 4", "SD Kelas 5", "SD Kelas 6",
+  "SMP Kelas 7", "SMP Kelas 8", "SMP Kelas 9",
+  "SMA Kelas 10", "SMA Kelas 11", "SMA Kelas 12",
+  "Alumni / Umum"
+];
+
 export function RegistrationForm({
   role,
   setRole,
@@ -78,6 +88,8 @@ export function RegistrationForm({
   setVillageCode,
   schoolName,
   setSchoolName,
+  grade,
+  setGrade,
   location,
   locationError,
   subjects,
@@ -174,16 +186,36 @@ export function RegistrationForm({
       </div>
 
       {role === "student" && (
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            <School className="h-4 w-4" /> Asal Sekolah
-          </Label>
-          <SchoolPicker 
-            value={schoolName}
-            onChange={setSchoolName}
-            placeholder="Ketik nama sekolah Anda..."
-          />
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <School className="h-4 w-4" /> Asal Sekolah
+              </Label>
+              <SchoolPicker 
+                value={schoolName}
+                onChange={setSchoolName}
+                placeholder="Pilih sekolah..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" /> Kelas
+              </Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={grade}
+                onChange={(e) => setGrade(e.target.value)}
+                required
+              >
+                <option value="">Pilih Kelas</option>
+                {GRADE_OPTIONS.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </>
       )}
       
       <div className="border-t pt-4">

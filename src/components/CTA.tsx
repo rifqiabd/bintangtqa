@@ -6,7 +6,7 @@ const CTA = () => {
   const navigate = useNavigate();
 
   const handleWhatsApp = () => {
-    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bintang%20TQA", "_blank");
+    window.open("https://api.whatsapp.com/send?phone=6285183380248&text=Hallo%20Bintang%20TQA", "_blank");
   };
 
   return (

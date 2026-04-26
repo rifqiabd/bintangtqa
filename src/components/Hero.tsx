@@ -14,7 +14,7 @@ const Hero = () => {
   };
 
   const handleWhatsApp = () => {
-    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bintang%20TQA", "_blank");
+    window.open("https://api.whatsapp.com/send?phone=6285183380248&text=Hallo%20Bintang%20TQA", "_blank");
   };
 
   return (
@@ -59,7 +59,7 @@ const Hero = () => {
                 className="gap-2 border-green-500 text-green-600 hover:bg-green-50"
               >
                 <Phone className="h-4 w-4" />
-                WhatsApp: 0853-2895-5589
+                WhatsApp: 0851-8338-0248
               </Button>
             </div>
 

@@ -51,6 +51,7 @@ export const registerUser = async (
     graduationYear?: number;
     ipk?: number;
     schoolName?: string;
+    grade?: string;
   }
 ) => {
   const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -77,6 +78,7 @@ export const registerUser = async (
     latitude: options?.latitude,
     longitude: options?.longitude,
     school_name: options?.schoolName,
+    grade: options?.grade,
   });
 
   const { error: roleError } = await supabase.from("user_roles").insert({

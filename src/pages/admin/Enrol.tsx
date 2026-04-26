@@ -14,6 +14,18 @@ import {
 import { UserPlus, BookOpen, User, Search } from "lucide-react";
 import { toast } from "sonner";
 
+const parseSubjects = (subjects: any): string[] => {
+  if (Array.isArray(subjects)) return subjects;
+  if (typeof subjects === 'string') {
+    try {
+      return JSON.parse(subjects);
+    } catch {
+      return subjects.split(',').map((s: string) => s.trim());
+    }
+  }
+  return [];
+};
+
 interface Student {
   id: string;
   full_name: string;
@@ -91,7 +103,7 @@ const Enrol = () => {
           return {
             id: td.tutor_id,
             full_name: profile?.full_name || "Unknown",
-            subjects: td.subjects || [],
+            subjects: parseSubjects(td.subjects),
           };
         }) || [];
         setTutors(merged);

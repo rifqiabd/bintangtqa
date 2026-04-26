@@ -52,7 +52,6 @@ const Enrol = () => {
   
   const [selectedStudent, setSelectedStudent] = useState("");
   const [selectedTutor, setSelectedTutor] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("");
   
   const [studentSearch, setStudentSearch] = useState("");
   const [tutorSearch, setTutorSearch] = useState("");
@@ -125,8 +124,8 @@ const Enrol = () => {
   };
 
   const handleEnrol = async () => {
-    if (!selectedStudent || !selectedTutor || !selectedSubject) {
-      toast.error("Mohon lengkapi semua data");
+    if (!selectedStudent || !selectedTutor) {
+      toast.error("Mohon pilih student dan tutor");
       return;
     }
 
@@ -148,7 +147,6 @@ const Enrol = () => {
       const { error } = await supabase.from("enrollments").insert({
         student_id: selectedStudent,
         tutor_id: selectedTutor,
-        subject: selectedSubject,
         status: "active",
       });
 
@@ -216,10 +214,7 @@ const Enrol = () => {
           {/* Student Selection */}
           <div className="space-y-2">
             <Label>Pilih Siswa</Label>
-            <Select value={selectedStudent} onValueChange={(val) => {
-              setSelectedStudent(val);
-              setSelectedSubject("");
-            }}>
+            <Select value={selectedStudent} onValueChange={setSelectedStudent}>
               <SelectTrigger>
                 <SelectValue placeholder="Pilih siswa..." />
               </SelectTrigger>
@@ -256,10 +251,7 @@ const Enrol = () => {
           {/* Tutor Selection */}
           <div className="space-y-2">
             <Label>Pilih Tutor</Label>
-            <Select value={selectedTutor} onValueChange={(val) => {
-              setSelectedTutor(val);
-              setSelectedSubject("");
-            }}>
+            <Select value={selectedTutor} onValueChange={setSelectedTutor}>
               <SelectTrigger>
                 <SelectValue placeholder="Pilih tutor..." />
               </SelectTrigger>
@@ -295,39 +287,9 @@ const Enrol = () => {
             </Select>
           </div>
 
-          {/* Subject Selection */}
-          <div className="space-y-2">
-            <Label>Pilih Mata Pelajaran</Label>
-            <Select 
-              value={selectedSubject} 
-              onValueChange={setSelectedSubject}
-              disabled={!selectedTutor}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={selectedTutor ? "Pilih mata pelajaran..." : "Pilih tutor dulu..."} />
-              </SelectTrigger>
-              <SelectContent>
-                {getTutorSubjects(selectedTutor).length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    Tutor tidak memiliki mata pelajaran
-                  </div>
-                ) : (
-                  getTutorSubjects(selectedTutor).map((subject) => (
-                    <SelectItem key={subject.id} value={subject.name}>
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4" />
-                        {subject.name}
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
           <Button 
             onClick={handleEnrol} 
-            disabled={enrolling || !selectedStudent || !selectedTutor || !selectedSubject}
+            disabled={enrolling || !selectedStudent || !selectedTutor}
             className="w-full"
           >
             {enrolling ? "Mendaftarkan..." : "Daftarkan Siswa"}

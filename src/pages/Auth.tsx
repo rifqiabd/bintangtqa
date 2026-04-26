@@ -132,7 +132,13 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [addressRegion, setAddressRegion] = useState({
+    province_code: "",
+    regency_code: "",
+    district_code: "",
+    village_code: "",
+    address: "",
+  });
   const [subjects, setSubjects] = useState<string[]>([]);
   const [experience, setExperience] = useState("");
   
@@ -215,7 +221,7 @@ const Auth = () => {
         email,
         phone,
         password,
-        address: address || undefined,
+        address: addressRegion.address || undefined,
         experience: experience || undefined,
       });
 
@@ -227,6 +233,10 @@ const Auth = () => {
         role,
         {
           address: validatedData.address,
+          province_code: addressRegion.province_code || undefined,
+          regency_code: addressRegion.regency_code || undefined,
+          district_code: addressRegion.district_code || undefined,
+          village_code: addressRegion.village_code || undefined,
           latitude: location?.lat,
           longitude: location?.lng,
           subjects: role === "tutor" ? subjects : undefined,
@@ -380,8 +390,8 @@ const Auth = () => {
                 setEmail={setEmail}
                 phone={phone}
                 setPhone={setPhone}
-                address={address}
-                setAddress={setAddress}
+                addressRegion={addressRegion}
+                setAddressRegion={setAddressRegion}
                 location={location}
                 locationError={locationError}
                 subjects={subjects}

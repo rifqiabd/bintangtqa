@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AddressPicker } from "@/components/AddressPicker";
+import { SchoolPicker } from "@/components/SchoolPicker";
 import { toast } from "sonner";
 import { User, Mail, Phone, MapPin, Save, Lock } from "lucide-react";
 
@@ -18,6 +19,7 @@ const StudentProfile = () => {
     email: "",
     phone: "",
     address: "",
+    school_name: "",
     latitude: null as number | null,
     longitude: null as number | null,
   });
@@ -54,7 +56,10 @@ const StudentProfile = () => {
 
       if (error) throw error;
       if (data) {
-        setProfile(data);
+        setProfile({
+          ...data,
+          school_name: data.school_name || "",
+        });
         setAddressRegion({
           province_code: data.province_code || "",
           regency_code: data.regency_code || "",
@@ -84,6 +89,7 @@ const StudentProfile = () => {
           full_name: profile.full_name,
           phone: profile.phone,
           address: profile.address,
+          school_name: profile.school_name || null,
           latitude: profile.latitude,
           longitude: profile.longitude,
           province_code: addressRegion.province_code || null,
@@ -234,6 +240,16 @@ const StudentProfile = () => {
                   placeholder="08xx-xxxx-xxxx"
                   className="pl-10"
                   required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Asal Sekolah</Label>
+              <div className="flex gap-2 relative">
+                <SchoolPicker
+                  value={profile.school_name}
+                  onChange={(val) => setProfile({ ...profile, school_name: val })}
                 />
               </div>
             </div>

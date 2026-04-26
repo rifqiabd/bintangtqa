@@ -37,6 +37,7 @@ export const registerUser = async (
     address?: string;
     latitude?: number;
     longitude?: number;
+    schoolName?: string;
     subjects?: string[];
     experience?: string;
     ktpLink?: string;
@@ -67,6 +68,7 @@ export const registerUser = async (
     address: options?.address,
     latitude: options?.latitude,
     longitude: options?.longitude,
+    school_name: options?.schoolName,
   });
 
   const { error: roleError } = await supabase.from("user_roles").insert({

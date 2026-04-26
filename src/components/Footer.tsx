@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 const Footer = () => {
   const handleWhatsApp = () => {
-    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bintang%20TQA", "_blank");
+    window.open("https://api.whatsapp.com/send?phone=6285188880248&text=Hallo%20Bintang%20TQA", "_blank");
   };
 
   return (
@@ -41,7 +41,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="h-4 w-4" />
-                0853-2895-5589
+                0851-8888-0248
               </li>
             </ul>
             <Button 

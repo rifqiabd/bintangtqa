@@ -297,7 +297,7 @@ const Auth = () => {
             <GraduationCap className="h-12 w-12 text-primary" />
           </div>
           <CardTitle className="text-2xl">
-            {isLogin ? "Masuk ke Bimbel Samuray" : "Daftar di Bimbel Samuray"}
+            {isLogin ? "Masuk ke Bintang TQA" : "Daftar di Bintang TQA"}
           </CardTitle>
           <CardDescription>
             {isLogin

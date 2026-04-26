@@ -35,7 +35,7 @@ const programs = [
 
 const Programs = () => {
   const handleWhatsApp = () => {
-    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bimbel%20SamuraY,%20saya%20ingin%20bertanya%20tentang%20program%20belajar", "_blank");
+    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bintang%20TQA,%20saya%20ingin%20bertanya%20tentang%20program%20belajar", "_blank");
   };
 
   return (

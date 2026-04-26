@@ -14,7 +14,7 @@ const Hero = () => {
   };
 
   const handleWhatsApp = () => {
-    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bimbel%20SamuraY", "_blank");
+    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bintang%20TQA", "_blank");
   };
 
   return (
@@ -31,7 +31,7 @@ const Hero = () => {
                 ke Rumah Anda
               </h1>
               <p className="text-lg text-muted-foreground">
-                Bimbingan Belajar SamuraY menyediakan jasa Les Privat untuk tingkat TK, SD, SMP dan SMA dengan pengajar profesional dan berpengalaman.
+                Bintang TQA menyediakan jasa Les Privat untuk tingkat TK, SD, SMP dan SMA dengan pengajar profesional dan berpengalaman.
               </p>
             </div>
 
@@ -89,7 +89,7 @@ const Hero = () => {
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-3xl blur-3xl"></div>
             <img
               src={heroImage}
-              alt="Bimbel Samuray - Les Privat Guru Datang ke Rumah"
+              alt="Bintang TQA - Les Privat Guru Datang ke Rumah"
               className="relative rounded-3xl shadow-2xl w-full h-auto"
             />
           </div>

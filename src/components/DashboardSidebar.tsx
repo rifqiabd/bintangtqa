@@ -92,7 +92,7 @@ const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onM
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="font-bold text-lg leading-tight text-foreground">Bimbel Samuray</span>
+              <span className="font-bold text-lg leading-tight text-foreground">Bintang TQA</span>
               <span className="text-xs text-muted-foreground capitalize">
                 {role === "admin" ? "Admin Panel" : role === "tutor" ? "Panel Tutor" : "Panel Siswa"}
               </span>

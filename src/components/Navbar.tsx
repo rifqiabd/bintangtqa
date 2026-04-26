@@ -12,6 +12,7 @@ const Navbar = () => {
     { label: "Beranda", href: "#home" },
     { label: "Program", href: "#programs" },
     { label: "Area Layanan", href: "#area" },
+    { label: "Tentang Kami", href: "#about" },
     { label: "Hubungi Kami", href: "#contact" },
   ];
 
@@ -33,7 +34,7 @@ const Navbar = () => {
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
               <BookOpen className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
               <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Bimbel SamuraY
+                Bintang TQA
               </span>
             </div>
 

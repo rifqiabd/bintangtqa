@@ -6,7 +6,7 @@ const CTA = () => {
   const navigate = useNavigate();
 
   const handleWhatsApp = () => {
-    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bimbel%20SamuraY", "_blank");
+    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bintang%20TQA", "_blank");
   };
 
   return (
@@ -14,7 +14,7 @@ const CTA = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
-            Siap Memulai Belajar dengan Bimbel Samuray?
+            Siap Memulai Belajar dengan Bintang TQA?
           </h2>
           <p className="text-lg text-muted-foreground">
             Bergabunglah dengan siswa-siswa kami di Pekalongan, Batang, Tegal, dan Brebes

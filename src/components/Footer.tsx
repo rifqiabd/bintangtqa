@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 const Footer = () => {
   const handleWhatsApp = () => {
-    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bimbel%20SamuraY", "_blank");
+    window.open("https://api.whatsapp.com/send?phone=6285328955589&text=Hallo%20Bintang%20TQA", "_blank");
   };
 
   return (
@@ -13,7 +13,7 @@ const Footer = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <BookOpen className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold">Bimbel SamuraY</span>
+              <span className="text-xl font-bold">Bintang TQA</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Bimbingan Belajar yang menyediakan jasa Les Privat (Guru Datang ke Rumah Siswa) untuk TK, SD, SMP dan SMA.
@@ -90,7 +90,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>© 2024 Bimbel SamuraY. All rights reserved.</p>
+          <p>© 2024 Bintang TQA. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -53,72 +53,57 @@ const FindTutors = () => {
         setMyLocation({ lat: myProfile.latitude, lng: myProfile.longitude });
       }
 
-      // Get all tutors from user_roles
-      const { data: tutorRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "tutor");
+      // Use safe RPC that exposes only non-sensitive tutor info
+      // (no phone/email leakage to non-enrolled students)
+      const { data: publicTutors, error: rpcError } = await supabase
+        .rpc("get_public_tutor_profiles");
 
-      if (rolesError) throw rolesError;
+      if (rpcError) throw rpcError;
 
-      if (!tutorRoles || tutorRoles.length === 0) {
+      if (!publicTutors || publicTutors.length === 0) {
         setTutors([]);
         setLoading(false);
         return;
       }
 
-      const tutorIds = tutorRoles.map(r => r.user_id);
+      // Find which tutors the student is already enrolled with
+      // (contact details will be visible only after enrollment)
+      const { data: myEnrollments } = await supabase
+        .from("enrollments")
+        .select("tutor_id")
+        .eq("student_id", user.id)
+        .eq("status", "active");
 
-      // Get tutor profiles
-      const { data: tutorProfiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name, phone, email, address, latitude, longitude")
-        .in("id", tutorIds);
+      const enrolledTutorIds = new Set((myEnrollments ?? []).map(e => e.tutor_id));
 
-      if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
-        throw profilesError;
+      // For enrolled tutors, fetch contact details from profiles (RLS will allow it)
+      let enrolledProfiles: Array<{ id: string; phone: string; email: string }> = [];
+      if (enrolledTutorIds.size > 0) {
+        const { data: enrolledData } = await supabase
+          .from("profiles")
+          .select("id, phone, email")
+          .in("id", Array.from(enrolledTutorIds));
+        enrolledProfiles = enrolledData ?? [];
       }
-      
-      console.log("Tutor profiles found:", tutorProfiles?.length);
-      
-      if (!tutorProfiles || tutorProfiles.length === 0) {
-        setTutors([]);
-        setLoading(false);
-        return;
-      }
 
-      // Get tutor details
-      const { data: tutorDetails } = await supabase
-        .from("tutor_details")
-        .select("tutor_id, subjects, experience, hourly_rate")
-        .in("tutor_id", tutorProfiles.map(t => t.id));
-
-      // Merge data and calculate distances
-      const allTutors = tutorProfiles.map(profile => {
-        const details = tutorDetails?.find(d => d.tutor_id === profile.id);
-        let distance = undefined;
-
-        if (myLocation && profile.latitude && profile.longitude) {
-          distance = calculateDistance(
-            myLocation.lat,
-            myLocation.lng,
-            profile.latitude,
-            profile.longitude
-          );
+      const allTutors = publicTutors.map((t: any) => {
+        let distance: number | undefined;
+        if (myLocation && t.latitude && t.longitude) {
+          distance = calculateDistance(myLocation.lat, myLocation.lng, t.latitude, t.longitude);
         }
 
+        const contact = enrolledProfiles.find(p => p.id === t.id);
         return {
-          id: profile.id,
-          full_name: profile.full_name || "Nama tidak tersedia",
-          phone: profile.phone || "-",
-          email: profile.email || "-",
-          address: profile.address || "Alamat tidak tersedia",
-          latitude: profile.latitude,
-          longitude: profile.longitude,
-          subjects: details?.subjects || [],
-          experience: details?.experience || "",
-          hourly_rate: details?.hourly_rate || null,
+          id: t.id,
+          full_name: t.full_name || "Nama tidak tersedia",
+          phone: contact?.phone ?? "Daftar untuk melihat",
+          email: contact?.email ?? "Daftar untuk melihat",
+          address: t.address || "Alamat tidak tersedia",
+          latitude: t.latitude,
+          longitude: t.longitude,
+          subjects: t.subjects || [],
+          experience: t.experience || "",
+          hourly_rate: t.hourly_rate ?? null,
           distance,
         };
       });

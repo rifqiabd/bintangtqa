@@ -109,19 +109,18 @@ const TutorProfile = () => {
       // Update tutor details
       const { error: tutorError } = await supabase
         .from("tutor_details")
-        .upsert(
+        .upsert([
           {
             tutor_id: user.id,
-            subjects: tutorDetails.subjects,
+            subjects: tutorDetails.subjects as any,
             experience: tutorDetails.experience,
             hourly_rate: tutorDetails.hourly_rate ? parseFloat(tutorDetails.hourly_rate) : null,
             is_available: tutorDetails.is_available,
           },
-          {
-            onConflict: 'tutor_id',
-            ignoreDuplicates: false,
-          }
-        );
+        ], {
+          onConflict: 'tutor_id',
+          ignoreDuplicates: false,
+        });
 
       if (tutorError) throw tutorError;
       toast.success("Profil berhasil diperbarui");

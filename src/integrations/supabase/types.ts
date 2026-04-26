@@ -223,6 +223,20 @@ export type Database = {
         Args: { lat1: number; lat2: number; lon1: number; lon2: number }
         Returns: number
       }
+      get_public_tutor_profiles: {
+        Args: never
+        Returns: {
+          address: string
+          experience: string
+          full_name: string
+          hourly_rate: number
+          id: string
+          is_available: boolean
+          latitude: number
+          longitude: number
+          subjects: Database["public"]["Enums"]["subject_area"][]
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

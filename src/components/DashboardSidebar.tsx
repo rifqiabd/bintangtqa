@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, Users, Calendar, MapPin, LogOut, User, GraduationCap, X, BookOpen, UserPlus } from "lucide-react";
+import { Home, Users, Calendar, MapPin, LogOut, User, GraduationCap, X, BookOpen, UserPlus, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -10,27 +10,29 @@ interface DashboardSidebarProps {
   isCollapsed?: boolean;
   isMobileOpen?: boolean;
   onMobileClose?: () => void;
+  isApproved?: boolean;
 }
 
-const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onMobileClose }: DashboardSidebarProps) => {
+const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onMobileClose, isApproved = true }: DashboardSidebarProps) => {
   const navigate = useNavigate();
 
   const adminItems = [
     { title: "Dashboard", url: "/admin", icon: Home },
     { title: "Semua Tutor", url: "/admin/tutors", icon: Users },
     { title: "Semua Siswa", url: "/admin/students", icon: User },
+    { title: "Persetujuan Tutor", url: "/admin/tutor-approval", icon: UserCheck },
     { title: "Laporan Absensi", url: "/admin/attendance", icon: Calendar },
     { title: "Peta Lokasi", url: "/admin/map", icon: MapPin },
     { title: "Mata Pelajaran", url: "/admin/subjects", icon: BookOpen },
     { title: "Enrol Siswa", url: "/admin/enrol", icon: UserPlus },
   ];
 
-  const tutorItems = [
+  const tutorItems = isApproved ? [
     { title: "Dashboard", url: "/tutor", icon: Home },
     { title: "Siswa Saya", url: "/tutor/students", icon: Users },
     { title: "Absensi", url: "/tutor/attendance", icon: Calendar },
     { title: "Profil", url: "/tutor/profile", icon: User },
-  ];
+  ] : [];
 
   const studentItems = [
     { title: "Dashboard", url: "/student", icon: Home },

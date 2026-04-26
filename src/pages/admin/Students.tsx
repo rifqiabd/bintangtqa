@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -14,95 +10,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Search, User, Mail, Phone, MapPin, BookOpen, Eye, GraduationCap, Pencil, Plus } from "lucide-react";
+import { Search, User, Mail, Phone, Eye, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-interface Student {
-  id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  address: string;
-  latitude: number | null;
-  longitude: number | null;
-  created_at: string;
-  enrollments?: {
-    id: string;
-    tutor_id: string;
-    subject: string;
-    status: string;
-  }[];
-}
+import { StudentDetailModal, StudentEditModal, StudentAddModal } from "@/components/admin/modals";
+import { loadStudents, addStudent, editStudent } from "@/lib/queries/studentQueries";
+import type { Student, EditingStudent, AddingStudent } from "@/lib/types/student";
+import { createEmptyEditingStudent, createEmptyAddingStudent } from "@/lib/types/student";
+import { formatSubjectLabel } from "@/lib/constants/subjects";
 
 const AdminStudents = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState({
-    full_name: "",
-    phone: "",
-    address: "",
-    latitude: null as number | null,
-    longitude: null as number | null,
-  });
+  const [editingStudent, setEditingStudent] = useState<EditingStudent>(createEmptyEditingStudent());
   const [savingEdit, setSavingEdit] = useState(false);
+  
   const [addOpen, setAddOpen] = useState(false);
-  const [addingStudent, setAddingStudent] = useState({
-    email: "",
-    full_name: "",
-    phone: "",
-  });
+  const [addingStudent, setAddingStudent] = useState<AddingStudent>(createEmptyAddingStudent());
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    loadStudents();
+    loadData();
   }, []);
 
-  const loadStudents = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const { data: studentUsers, error: studentError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "student");
-
-      if (studentError) throw studentError;
-
-      if (!studentUsers || studentUsers.length === 0) {
-        setStudents([]);
-        return;
-      }
-
-      const studentIds = studentUsers.map((s) => s.user_id);
-
-      const { data: profilesData, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, phone, address, latitude, longitude, created_at")
-        .in("id", studentIds)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      
-      // Get enrollments using bypass function
-      const { data: enrollmentsData } = await supabase.rpc('admin_get_all_enrollments');
-
-      const studentsWithEnrollments: Student[] = (profilesData || []).map((profile) => ({
-        ...profile,
-        enrollments: (enrollmentsData || []).filter((e: any) => e.student_id === profile.id)
-      }));
-
-      setStudents(studentsWithEnrollments);
+      const data = await loadStudents();
+      setStudents(data);
     } catch (error) {
       console.error("Error loading students:", error);
       toast.error("Gagal memuat data siswa");
@@ -128,32 +68,11 @@ const AdminStudents = () => {
     setAdding(true);
 
     try {
-      const tempPassword = Math.random().toString(36).slice(-8);
-      
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: addingStudent.email,
-        password: tempPassword,
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("User creation failed");
-
-      await supabase.from("profiles").insert({
-        id: authData.user.id,
-        full_name: addingStudent.full_name,
-        email: addingStudent.email,
-        phone: addingStudent.phone,
-      });
-
-      await supabase.from("user_roles").insert({
-        user_id: authData.user.id,
-        role: "student",
-      });
-
+      const tempPassword = await addStudent(addingStudent);
       toast.success("Siswa berhasil ditambahkan! Password: " + tempPassword);
       setAddOpen(false);
-      setAddingStudent({ email: "", full_name: "", phone: "" });
-      loadStudents();
+      setAddingStudent(createEmptyAddingStudent());
+      loadData();
     } catch (error: any) {
       console.error("Error adding student:", error);
       toast.error(error.message || "Gagal menambahkan siswa");
@@ -168,23 +87,10 @@ const AdminStudents = () => {
 
     try {
       if (!selectedStudent) return;
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          full_name: editingStudent.full_name,
-          phone: editingStudent.phone,
-          address: editingStudent.address,
-          latitude: editingStudent.latitude,
-          longitude: editingStudent.longitude,
-        })
-        .eq("id", selectedStudent.id);
-
-      if (profileError) throw profileError;
-
+      await editStudent(selectedStudent.id, editingStudent);
       toast.success("Siswa berhasil diperbarui");
       setEditOpen(false);
-      loadStudents();
+      loadData();
     } catch (error) {
       console.error("Error updating student:", error);
       toast.error("Gagal memperbarui siswa");
@@ -228,20 +134,6 @@ const AdminStudents = () => {
     });
   };
 
-  const getEnrollmentStatus = (enrollments: Student["enrollments"]) => {
-    if (!enrollments || enrollments.length === 0) return "Belum Daftar";
-    const active = enrollments.filter((e) => e.status === "active").length;
-    if (active > 0) return `${active} Tutor`;
-    return "Tidak Aktif";
-  };
-
-  const getEnrollmentStatusColor = (enrollments: Student["enrollments"]) => {
-    if (!enrollments || enrollments.length === 0) return "bg-gray-100 text-gray-800";
-    const active = enrollments.filter((e) => e.status === "active").length;
-    if (active > 0) return "bg-green-100 text-green-800";
-    return "bg-yellow-100 text-yellow-800";
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -271,9 +163,7 @@ const AdminStudents = () => {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <CardTitle className="text-lg">
-              Daftar Siswa ({filteredStudents.length})
-            </CardTitle>
+            <CardTitle className="text-lg">Daftar Siswa ({filteredStudents.length})</CardTitle>
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -303,8 +193,7 @@ const AdminStudents = () => {
                   <TableRow>
                     <TableHead>Nama</TableHead>
                     <TableHead>Kontak</TableHead>
-                    <TableHead>Alamat</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Tutor</TableHead>
                     <TableHead>Tgl Daftar</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
@@ -319,8 +208,8 @@ const AdminStudents = () => {
                           </div>
                           <div>
                             <div className="font-medium">{student.full_name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {student.enrollments?.length || 0} enrollment
+                            <div className="text-sm text-muted-foreground line-clamp-1">
+                              {student.address || "Alamat belum diisi"}
                             </div>
                           </div>
                         </div>
@@ -338,20 +227,26 @@ const AdminStudents = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="line-clamp-2 text-sm">
-                          {student.address || "Alamat belum diisi"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={getEnrollmentStatusColor(student.enrollments)}
-                        >
-                          {getEnrollmentStatus(student.enrollments)}
-                        </Badge>
+                        {(student.enrollments || []).length === 0 ? (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {student.enrollments?.slice(0, 2).map((e) => (
+                              <span key={e.id} className="px-2 py-0.5 bg-secondary text-secondary-foreground text-xs rounded">
+                                {formatSubjectLabel(e.subject)}
+                              </span>
+                            ))}
+                            {(student.enrollments?.length || 0) > 2 && (
+                              <span className="px-2 py-0.5 border text-xs rounded">
+                                +{(student.enrollments?.length || 0) - 2}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>{formatDate(student.created_at)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -382,205 +277,31 @@ const AdminStudents = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detail Siswa</DialogTitle>
-            <DialogDescription>
-              Informasi lengkap tentang siswa
-            </DialogDescription>
-          </DialogHeader>
-          {selectedStudent && (
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="h-10 w-10 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold">{selectedStudent.full_name}</h2>
-                  <Badge
-                    className={getEnrollmentStatusColor(selectedStudent.enrollments)}
-                  >
-                    {getEnrollmentStatus(selectedStudent.enrollments)}
-                  </Badge>
-                </div>
-              </div>
+      <StudentDetailModal
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        student={selectedStudent}
+      />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <h3 className="font-semibold">Informasi Kontak</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{selectedStudent.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{selectedStudent.phone}</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <span>
-                        {selectedStudent.address || "Alamat belum diisi"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+      <StudentEditModal
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        student={selectedStudent}
+        editingData={editingStudent}
+        setEditingData={setEditingStudent}
+        saving={savingEdit}
+        onSave={handleEditStudent}
+        onGetLocation={getCurrentLocation}
+      />
 
-                <div className="space-y-3">
-                  <h3 className="font-semibold">Informasi Enrollment</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                      <span>
-                        {selectedStudent.enrollments?.length || 0} total enrollment
-                      </span>
-                    </div>
-                    {selectedStudent.enrollments &&
-                      selectedStudent.enrollments.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {selectedStudent.enrollments.map((e) => (
-                            <Badge key={e.id} variant="secondary">
-                              {e.status}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                Siswa sejak: {formatDate(selectedStudent.created_at)}
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailOpen(false)}>
-              Tutup
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Siswa</DialogTitle>
-            <DialogDescription>
-              Edit informasi siswa
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditStudent} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="editFullName">Nama Lengkap</Label>
-              <Input
-                id="editFullName"
-                value={editingStudent.full_name}
-                onChange={(e) => setEditingStudent({ ...editingStudent, full_name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editPhone">Nomor HP</Label>
-              <Input
-                id="editPhone"
-                value={editingStudent.phone}
-                onChange={(e) => setEditingStudent({ ...editingStudent, phone: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editAddress">Alamat</Label>
-              <Textarea
-                id="editAddress"
-                value={editingStudent.address}
-                onChange={(e) => setEditingStudent({ ...editingStudent, address: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Lokasi</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={
-                    editingStudent.latitude && editingStudent.longitude
-                      ? `${editingStudent.latitude.toFixed(6)}, ${editingStudent.longitude?.toFixed(6)}`
-                      : "Belum diset"
-                  }
-                  disabled
-                  className="bg-muted"
-                />
-                <Button type="button" variant="outline" onClick={getCurrentLocation}>
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Dapatkan Lokasi
-                </Button>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
-                Batal
-              </Button>
-              <Button type="submit" disabled={savingEdit}>
-                {savingEdit ? "Menyimpan..." : "Simpan"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Student Dialog */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Siswa Baru</DialogTitle>
-            <DialogDescription>
-              Daftar siswa baru secara offline. Akun akan dibuatkan otomatis.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleAddStudent} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="addEmail">Email</Label>
-              <Input
-                id="addEmail"
-                type="email"
-                value={addingStudent.email}
-                onChange={(e) => setAddingStudent({ ...addingStudent, email: e.target.value })}
-                placeholder="siswa@email.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="addName">Nama Lengkap</Label>
-              <Input
-                id="addName"
-                value={addingStudent.full_name}
-                onChange={(e) => setAddingStudent({ ...addingStudent, full_name: e.target.value })}
-                placeholder="Nama lengkap siswa"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="addPhone">Nomor HP</Label>
-              <Input
-                id="addPhone"
-                value={addingStudent.phone}
-                onChange={(e) => setAddingStudent({ ...addingStudent, phone: e.target.value })}
-                placeholder="0812..."
-                required
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
-                Batal
-              </Button>
-              <Button type="submit" disabled={adding}>
-                {adding ? "Menambahkan..." : "Tambah Siswa"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <StudentAddModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        formData={addingStudent}
+        setFormData={setAddingStudent}
+        loading={adding}
+        onSubmit={handleAddStudent}
+      />
     </div>
   );
 };

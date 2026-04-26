@@ -56,6 +56,21 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
         return;
       }
 
+      // Check tutor approval status
+      if (userRoles[0].role === "tutor") {
+        const { data: tutorDetails } = await supabase
+          .from("tutor_details")
+          .select("is_approved")
+          .eq("tutor_id", session.user.id)
+          .single();
+
+        if (tutorDetails && !tutorDetails.is_approved) {
+          console.log("[ProtectedRoute] Tutor not approved, redirecting to /tutor/pending");
+          navigate("/tutor/pending");
+          return;
+        }
+      }
+
       console.log("[ProtectedRoute] Authorized!");
       setAuthorized(true);
     } catch (error) {

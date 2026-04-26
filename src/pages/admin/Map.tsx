@@ -209,11 +209,11 @@ const AdminMap = () => {
               </p>
             </div>
           ) : (
-            <div className="h-[500px] rounded-lg overflow-hidden border">
+            <div className="h-[500px] rounded-lg overflow-hidden border relative z-0">
               <MapContainer
                 center={mapCenter}
                 zoom={zoom}
-                style={{ height: "100%", width: "100%" }}
+                style={{ height: "100%", width: "100%", zIndex: 0 }}
               >
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

@@ -23,7 +23,7 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
           onMobileClose={() => setIsMobileSidebarOpen(false)}
         />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-16 border-b border-border flex items-center px-4 lg:px-6 bg-background sticky top-0 z-30">
+          <header className="h-16 border-b border-border flex items-center px-4 lg:px-6 bg-background sticky top-0 z-40">
             {/* Mobile Menu Button */}
             <Button
               variant="ghost"
@@ -48,7 +48,7 @@ const DashboardLayout = ({ role }: DashboardLayoutProps) => {
               {role === "admin" ? "Admin Panel" : role === "tutor" ? "Panel Tutor" : "Panel Siswa"}
             </h2>
           </header>
-          <main className="flex-1 p-4 lg:p-6 bg-secondary/30 overflow-y-auto">
+          <main className="flex-1 p-4 lg:p-6 bg-secondary/30 overflow-y-auto pt-20 lg:pt-16">
             <Outlet />
           </main>
         </div>

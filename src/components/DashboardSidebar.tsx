@@ -62,7 +62,7 @@ const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onM
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[60] lg:hidden"
           onClick={onMobileClose}
         />
       )}
@@ -74,7 +74,7 @@ const DashboardSidebar = ({ role, isCollapsed = false, isMobileOpen = false, onM
         "hidden lg:flex",
         isCollapsed ? "w-16" : "w-64",
         // Mobile
-        "lg:relative fixed inset-y-0 left-0 z-50",
+        "lg:relative fixed inset-y-0 left-0 z-[70]",
         isMobileOpen ? "flex w-64" : "hidden lg:flex"
       )}>
         {/* Mobile Close Button */}

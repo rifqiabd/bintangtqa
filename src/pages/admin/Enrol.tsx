@@ -3,28 +3,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { UserPlus, BookOpen, User, Search } from "lucide-react";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Search, User, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 
-const parseSubjects = (subjects: any): string[] => {
-  if (Array.isArray(subjects)) return subjects;
-  if (typeof subjects === 'string') {
-    try {
-      return JSON.parse(subjects);
-    } catch {
-      return subjects.split(',').map((s: string) => s.trim());
-    }
-  }
-  return [];
-};
+interface Tutor {
+  id: string;
+  full_name: string;
+  email: string;
+}
 
 interface Student {
   id: string;
@@ -32,29 +27,23 @@ interface Student {
   email: string;
 }
 
-interface Tutor {
+interface Enrollment {
   id: string;
-  full_name: string;
-  subjects: string[];
-}
-
-interface Subject {
-  id: string;
-  name: string;
+  student_id: string;
+  tutor_id: string;
+  status: string;
+  student?: Student;
 }
 
 const Enrol = () => {
-  const [students, setStudents] = useState<Student[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enrolling, setEnrolling] = useState(false);
   
-  const [selectedStudent, setSelectedStudent] = useState("");
-  const [selectedTutor, setSelectedTutor] = useState("");
-  
-  const [studentSearch, setStudentSearch] = useState("");
+  const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
   const [tutorSearch, setTutorSearch] = useState("");
+  const [studentSearch, setStudentSearch] = useState("");
 
   useEffect(() => {
     loadData();
@@ -63,7 +52,22 @@ const Enrol = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load students
+      // Load all tutors
+      const { data: tutorRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "tutor");
+
+      if (tutorRoles && tutorRoles.length > 0) {
+        const tutorIds = tutorRoles.map(r => r.user_id);
+        const { data: tutorData } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", tutorIds);
+        setTutors(tutorData || []);
+      }
+
+      // Load all students
       const { data: studentRoles } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -78,43 +82,18 @@ const Enrol = () => {
         setStudents(studentData || []);
       }
 
-      // Load tutors
-      const { data: tutorRoles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "tutor");
+      // Load all enrollments with student info
+      const { data: enrollmentData } = await supabase
+        .from("enrollments")
+        .select("*")
+        .eq("status", "active");
 
-      if (tutorRoles && tutorRoles.length > 0) {
-        const tutorIds = tutorRoles.map(r => r.user_id);
-        
-        const { data: tutorDetails } = await supabase
-          .from("tutor_details")
-          .select("tutor_id, subjects")
-          .in("tutor_id", tutorIds);
+      const enrichedEnrollments = (enrollmentData || []).map(e => ({
+        ...e,
+        student: students.find(s => s.id === e.student_id)
+      }));
 
-        const { data: tutorProfiles } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", tutorIds);
-
-        const merged = tutorDetails?.map(td => {
-          const profile = tutorProfiles?.find(p => p.id === td.tutor_id);
-          return {
-            id: td.tutor_id,
-            full_name: profile?.full_name || "Unknown",
-            subjects: parseSubjects(td.subjects),
-          };
-        }) || [];
-        setTutors(merged);
-      }
-
-      // Load subjects
-      const { data: subjectData } = await supabase
-        .from("subjects")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
-      setSubjects(subjectData || []);
+      setEnrollments(enrollmentData || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Gagal memuat data");
@@ -123,67 +102,87 @@ const Enrol = () => {
     }
   };
 
-  const handleEnrol = async () => {
-    if (!selectedStudent || !selectedTutor) {
-      toast.error("Mohon pilih student dan tutor");
+  const handleSelectTutor = (tutor: Tutor) => {
+    setSelectedTutor(tutor);
+  };
+
+  const getEnrolledStudents = (tutorId: string) => {
+    return enrollments
+      .filter(e => e.tutor_id === tutorId && e.status === "active")
+      .map(e => ({
+        ...e,
+        student: students.find(s => s.id === e.student_id)
+      }))
+      .filter(e => e.student);
+  };
+
+  const handleUnenroll = async (enrollmentId: string) => {
+    if (!confirm("Yakin ingin unenroll siswa ini?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("enrollments")
+        .delete()
+        .eq("id", enrollmentId);
+
+      if (error) throw error;
+      toast.success("Berhasil mengunenroll siswa");
+      loadData();
+    } catch (error) {
+      console.error("Error unenrolling:", error);
+      toast.error("Gagal mengunenroll");
+    }
+  };
+
+  const handleEnroll = async (studentId: string) => {
+    if (!selectedTutor) {
+      toast.error("Pilih tutor terlebih dahulu");
       return;
     }
 
-    setEnrolling(true);
+    // Check if already enrolled
+    const existing = enrollments.find(
+      e => e.tutor_id === selectedTutor.id && e.student_id === studentId && e.status === "active"
+    );
+
+    if (existing) {
+      toast.error("Siswa ini sudah terdaftar dengan tutor ini");
+      return;
+    }
+
     try {
-      // Check if already enrolled
-      const { data: existing } = await supabase
-        .from("enrollments")
-        .select("id")
-        .eq("student_id", selectedStudent)
-        .eq("tutor_id", selectedTutor)
-        .single();
-
-      if (existing) {
-        toast.error("Siswa ini sudah terdaftar dengan tutor ini");
-        return;
-      }
-
       const { error } = await supabase.from("enrollments").insert({
-        student_id: selectedStudent,
-        tutor_id: selectedTutor,
+        student_id: studentId,
+        tutor_id: selectedTutor.id,
         status: "active",
       });
 
       if (error) throw error;
       toast.success("Berhasil mendaftarkan siswa ke tutor");
-      
-      // Reset form
-      setSelectedStudent("");
-      setSelectedTutor("");
-      setSelectedSubject("");
+      loadData();
+      setSelectedTutor(null);
     } catch (error) {
       console.error("Error enrolling:", error);
       toast.error("Gagal mendaftarkan siswa");
-    } finally {
-      setEnrolling(false);
     }
   };
 
-  const filteredStudents = students.filter(s =>
-    s.full_name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-    s.email.toLowerCase().includes(studentSearch.toLowerCase())
-  );
-
   const filteredTutors = tutors.filter(t =>
-    t.full_name.toLowerCase().includes(tutorSearch.toLowerCase())
+    t.full_name.toLowerCase().includes(tutorSearch.toLowerCase()) ||
+    t.email.toLowerCase().includes(tutorSearch.toLowerCase())
   );
 
-  const getTutorSubjects = (tutorId: string) => {
-    const tutor = tutors.find(t => t.id === tutorId);
-    if (!tutor) return [];
-    return subjects.filter(s => 
-      tutor.subjects.some(ts => 
-        ts.toLowerCase().includes(s.name.toLowerCase()) ||
-        s.name.toLowerCase().includes(ts.toLowerCase())
+  const availableStudents = selectedTutor
+    ? students.filter(s => 
+        !enrollments.some(e => 
+          e.tutor_id === selectedTutor.id && 
+          e.student_id === s.id && 
+          e.status === "active"
+        ) &&
+        (s.full_name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+         s.email.toLowerCase().includes(studentSearch.toLowerCase()))
       )
-    );
-  };
+    : [];
 
   if (loading) {
     return (
@@ -200,102 +199,147 @@ const Enrol = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl lg:text-3xl font-bold">Enrol Siswa</h1>
-        <p className="text-muted-foreground">Daftarkan siswa ke tutor secara manual</p>
+        <p className="text-muted-foreground">Kelola enrolment tutor dan siswa</p>
       </div>
 
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Form Pendaftaran
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Student Selection */}
-          <div className="space-y-2">
-            <Label>Pilih Siswa</Label>
-            <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih siswa..." />
-              </SelectTrigger>
-              <SelectContent>
-                <div className="p-2">
-                  <Input
-                    placeholder="Cari siswa..."
-                    value={studentSearch}
-                    onChange={(e) => setStudentSearch(e.target.value)}
-                    className="mb-2"
-                  />
-                </div>
-                {filteredStudents.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    Tidak ada siswa
-                  </div>
-                ) : (
-                  filteredStudents.map((student) => (
-                    <SelectItem key={student.id} value={student.id}>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        <div>
-                          <div>{student.full_name}</div>
-                          <div className="text-xs text-muted-foreground">{student.email}</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Tutor Selection */}
-          <div className="space-y-2">
-            <Label>Pilih Tutor</Label>
-            <Select value={selectedTutor} onValueChange={setSelectedTutor}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih tutor..." />
-              </SelectTrigger>
-              <SelectContent>
-                <div className="p-2">
-                  <Input
-                    placeholder="Cari tutor..."
-                    value={tutorSearch}
-                    onChange={(e) => setTutorSearch(e.target.value)}
-                    className="mb-2"
-                  />
-                </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Tutor Table */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Tutor
+              </CardTitle>
+              <Input
+                placeholder="Cari tutor..."
+                value={tutorSearch}
+                onChange={(e) => setTutorSearch(e.target.value)}
+                className="w-48"
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Siswa Terdaftar</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredTutors.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    Tidak ada tutor
-                  </div>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                      Tidak ada tutor
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filteredTutors.map((tutor) => (
-                    <SelectItem key={tutor.id} value={tutor.id}>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        <div>
-                          <div>{tutor.full_name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {tutor.subjects?.slice(0, 3).join(", ")}
-                          </div>
-                        </div>
-                      </div>
-                    </SelectItem>
+                    <TableRow 
+                      key={tutor.id}
+                      className={selectedTutor?.id === tutor.id ? "bg-primary/10" : ""}
+                      onClick={() => handleSelectTutor(tutor)}
+                    >
+                      <TableCell className="font-medium">{tutor.full_name}</TableCell>
+                      <TableCell>{tutor.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {getEnrolledStudents(tutor.id).length} siswa
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </SelectContent>
-            </Select>
-          </div>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-          <Button 
-            onClick={handleEnrol} 
-            disabled={enrolling || !selectedStudent || !selectedTutor}
-            className="w-full"
-          >
-            {enrolling ? "Mendaftarkan..." : "Daftarkan Siswa"}
-          </Button>
-        </CardContent>
-      </Card>
+        {/* Student Table - based on selected tutor */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                {selectedTutor ? (
+                  <>Siswa dari {selectedTutor.full_name}</>
+                ) : (
+                  <>Pilih tutor untuk melihat siswa</>
+                )}
+              </CardTitle>
+              {selectedTutor && (
+                <Input
+                  placeholder="Cari siswa..."
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  className="w-48"
+                />
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {selectedTutor ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {/* Registered students */}
+                  {getEnrolledStudents(selectedTutor.id).map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell className="font-medium">{e.student?.full_name}</TableCell>
+                      <TableCell>{e.student?.email}</TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleUnenroll(e.id)}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Unenroll
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {/* Available students to enroll */}
+                  {availableStudents.length === 0 && getEnrolledStudents(selectedTutor.id).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                        Semua siswa sudah terdaftar
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    availableStudents.map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell className="font-medium">{student.full_name}</TableCell>
+                        <TableCell>{student.email}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            onClick={() => handleEnroll(student.id)}
+                          >
+                            <UserPlus className="h-4 w-4 mr-1" />
+                            Enroll
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Klik tutor di tabel sebelah untuk melihat siswa
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

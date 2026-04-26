@@ -13,14 +13,17 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
 
-  const checkAuth = async () => {
+  const checkAuth = async (retryCount = 0) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        console.log("[ProtectedRoute] No session, redirecting to /auth");
         navigate("/auth");
         return;
       }
+
+      console.log("[ProtectedRoute] Session found, user ID:", session.user.id);
 
       const { data: userRoles, error } = await supabase
         .from("user_roles")
@@ -28,19 +31,35 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
         .eq("user_id", session.user.id);
 
       if (error) {
-        console.error("Error fetching user role:", error);
+        console.error("[ProtectedRoute] Error fetching user role:", error);
         navigate("/auth");
         return;
       }
 
-      if (!userRoles || userRoles.length === 0 || !allowedRoles.includes(userRoles[0].role)) {
+      console.log("[ProtectedRoute] User roles:", userRoles);
+
+      if (!userRoles || userRoles.length === 0) {
+        console.log("[ProtectedRoute] No roles found, retry:", retryCount);
+        if (retryCount < 5) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+          checkAuth(retryCount + 1);
+          return;
+        }
+        console.log("[ProtectedRoute] Max retries reached, redirecting to /");
         navigate("/");
         return;
       }
 
+      if (!allowedRoles.includes(userRoles[0].role)) {
+        console.log("[ProtectedRoute] Role not allowed:", userRoles[0].role);
+        navigate("/");
+        return;
+      }
+
+      console.log("[ProtectedRoute] Authorized!");
       setAuthorized(true);
     } catch (error) {
-      console.error("Auth check error:", error);
+      console.error("[ProtectedRoute] Auth check error:", error);
       navigate("/auth");
     } finally {
       setLoading(false);

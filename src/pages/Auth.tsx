@@ -188,6 +188,7 @@ const Auth = () => {
         
         if (!insertError) {
           toast.success("Login berhasil!");
+          await new Promise(resolve => setTimeout(resolve, 1000));
           navigate("/student");
         } else {
           console.error("Error creating role:", insertError);

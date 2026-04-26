@@ -53,21 +53,36 @@ const FindTutors = () => {
         setMyLocation({ lat: myProfile.latitude, lng: myProfile.longitude });
       }
 
-      // Use safe RPC that exposes only non-sensitive tutor info
-      // (no phone/email leakage to non-enrolled students)
-      const { data: publicTutors, error: rpcError } = await supabase
-        .rpc("get_public_tutor_profiles");
+      // Get available tutors from tutor_details
+      const { data: tutorDetails, error: tutorError } = await supabase
+        .from("tutor_details")
+        .select("tutor_id, subjects, experience, hourly_rate")
+        .eq("is_available", true);
 
-      if (rpcError) throw rpcError;
+      if (tutorError) {
+        console.error("Error fetching tutor details:", tutorError);
+        throw tutorError;
+      }
 
-      if (!publicTutors || publicTutors.length === 0) {
+      if (!tutorDetails || tutorDetails.length === 0) {
         setTutors([]);
         setLoading(false);
         return;
       }
 
+      // Get tutor profiles
+      const tutorIds = tutorDetails.map(t => t.tutor_id);
+      const { data: tutorProfiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, full_name, phone, email, address, latitude, longitude")
+        .in("id", tutorIds);
+
+      if (profileError) {
+        console.error("Error fetching tutor profiles:", profileError);
+        throw profileError;
+      }
+
       // Find which tutors the student is already enrolled with
-      // (contact details will be visible only after enrollment)
       const { data: myEnrollments } = await supabase
         .from("enrollments")
         .select("tutor_id")
@@ -76,34 +91,26 @@ const FindTutors = () => {
 
       const enrolledTutorIds = new Set((myEnrollments ?? []).map(e => e.tutor_id));
 
-      // For enrolled tutors, fetch contact details from profiles (RLS will allow it)
-      let enrolledProfiles: Array<{ id: string; phone: string; email: string }> = [];
-      if (enrolledTutorIds.size > 0) {
-        const { data: enrolledData } = await supabase
-          .from("profiles")
-          .select("id, phone, email")
-          .in("id", Array.from(enrolledTutorIds));
-        enrolledProfiles = enrolledData ?? [];
-      }
-
-      const allTutors = publicTutors.map((t: any) => {
+      // Map tutor data with profile info
+      const allTutors = tutorDetails.map((td) => {
+        const profile = tutorProfiles?.find(p => p.id === td.tutor_id);
+        
         let distance: number | undefined;
-        if (myLocation && t.latitude && t.longitude) {
-          distance = calculateDistance(myLocation.lat, myLocation.lng, t.latitude, t.longitude);
+        if (myLocation && profile?.latitude && profile?.longitude) {
+          distance = calculateDistance(myLocation.lat, myLocation.lng, profile.latitude, profile.longitude);
         }
 
-        const contact = enrolledProfiles.find(p => p.id === t.id);
         return {
-          id: t.id,
-          full_name: t.full_name || "Nama tidak tersedia",
-          phone: contact?.phone ?? "Daftar untuk melihat",
-          email: contact?.email ?? "Daftar untuk melihat",
-          address: t.address || "Alamat tidak tersedia",
-          latitude: t.latitude,
-          longitude: t.longitude,
-          subjects: t.subjects || [],
-          experience: t.experience || "",
-          hourly_rate: t.hourly_rate ?? null,
+          id: td.tutor_id,
+          full_name: profile?.full_name || "Nama tidak tersedia",
+          phone: enrolledTutorIds.has(td.tutor_id) ? (profile?.phone ?? "Daftar untuk melihat") : "Daftar untuk melihat",
+          email: enrolledTutorIds.has(td.tutor_id) ? (profile?.email ?? "Daftar untuk melihat") : "Daftar untuk melihat",
+          address: profile?.address || "Alamat tidak tersedia",
+          latitude: profile?.latitude ?? null,
+          longitude: profile?.longitude ?? null,
+          subjects: td.subjects || [],
+          experience: td.experience || "",
+          hourly_rate: td.hourly_rate ?? null,
           distance,
         };
       });

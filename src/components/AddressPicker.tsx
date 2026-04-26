@@ -69,9 +69,9 @@ export function AddressPicker({ value, onChange }: AddressPickerProps) {
     loadProvinces();
   }, []);
 
-  // Handle initial value
+  // Handle initial value - wait for provinces to load first
   useEffect(() => {
-    if (value?.province_code) {
+    if (value?.province_code && provinces.length > 0) {
       setSelectedProvince(value.province_code);
       if (value?.regency_code) {
         setSelectedRegency(value.regency_code);
@@ -86,7 +86,7 @@ export function AddressPicker({ value, onChange }: AddressPickerProps) {
         }
       }
     }
-  }, [value]);
+  }, [value, provinces.length]);
 
   const loadProvinces = async () => {
     setLoading(true);

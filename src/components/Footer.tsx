@@ -37,7 +37,7 @@ const Footer = () => {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2 text-muted-foreground">
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>Jl. Sulawesi Gg. 3 No. 41 Kergon, Kota Pekalongan (Belakang Masjid An Nur)</span>
+                <span>Simbangwetan GG 8 No. 29 RT 011 RW 004, Simbangwetan, Kec. Buaran, Kab. Pekalongan, Jawa Tengah</span>
               </li>
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="h-4 w-4" />
@@ -58,7 +58,7 @@ const Footer = () => {
             <h3 className="font-semibold mb-4">Ikuti Kami</h3>
             <div className="flex gap-3">
               <a 
-                href="https://www.instagram.com/bimbelsamuray_official/" 
+                href="https://www.instagram.com/tqassimbani/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
@@ -66,7 +66,7 @@ const Footer = () => {
                 <Instagram className="h-5 w-5 text-primary" />
               </a>
               <a 
-                href="https://www.facebook.com/privatbimbelsamuray/" 
+                href="https://www.facebook.com/thibbilqulubassimbani/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
@@ -74,7 +74,7 @@ const Footer = () => {
                 <Facebook className="h-5 w-5 text-primary" />
               </a>
               <a 
-                href="https://www.youtube.com/channel/UCazL9Y_7hULA-UNgGJTUYXw" 
+                href="https://www.youtube.com/@thibbil_qulub_assimbani" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
@@ -83,8 +83,8 @@ const Footer = () => {
               </a>
             </div>
             <div className="mt-4 text-sm text-muted-foreground">
-              <p>@bimbelsamuray_official</p>
-              <p>@BBS_PKL (TikTok)</p>
+              <p>@tqassimbani</p>
+              <p>@thibbil_qulub_assimbani</p>
             </div>
           </div>
         </div>

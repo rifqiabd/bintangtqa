@@ -387,7 +387,7 @@ const AdminStudents = () => {
                         <div className="flex flex-wrap gap-1">
                           {selectedStudent.enrollments.map((e) => (
                             <Badge key={e.id} variant="secondary">
-                              {e.subject.replace(/_/g, " ")} - {e.status}
+                              {e.status}
                             </Badge>
                           ))}
                         </div>

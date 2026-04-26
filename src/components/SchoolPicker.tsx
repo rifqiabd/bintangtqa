@@ -51,14 +51,22 @@ export function SchoolPicker({ value, onChange, className }: SchoolPickerProps) 
     const fetchSchools = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke("fetch-schools", {
-          body: {
+        const res = await fetch('https://xkupzhwboluapizzstwc.supabase.co/functions/v1/fetch-schools', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             nama: debouncedSearch,
             limit: 20,
-          },
+          }),
         });
 
-        if (error) throw error;
+        if (!res.ok) {
+          throw new Error(`Error fetching schools: ${res.statusText}`);
+        }
+
+        const data = await res.json();
 
         if (data && data.success && data.data) {
           setSchools(data.data);

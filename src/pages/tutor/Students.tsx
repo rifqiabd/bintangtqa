@@ -10,7 +10,6 @@ import { toast } from "sonner";
 interface Enrollment {
   id: string;
   student_id: string;
-  subject: string;
   status: string;
   created_at: string;
   student: {
@@ -41,7 +40,6 @@ const TutorStudents = () => {
         .select(`
           id,
           student_id,
-          subject,
           status,
           created_at,
           student:profiles!enrollments_student_id_fkey(
@@ -193,7 +191,7 @@ const TutorStudents = () => {
                   <CardContent className="space-y-3">
                     <div className="flex items-center gap-2 text-sm">
                       <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <span className="capitalize">{enrollment.subject}</span>
+                      <span className="capitalize">{enrollment.status}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="h-4 w-4 text-muted-foreground" />
@@ -247,7 +245,7 @@ const TutorStudents = () => {
                   <CardContent className="space-y-3">
                     <div className="flex items-center gap-2 text-sm">
                       <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <span className="capitalize">{enrollment.subject}</span>
+                      <span className="capitalize">{enrollment.status}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="h-4 w-4 text-muted-foreground" />

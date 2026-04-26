@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Users, Mail, Phone, MapPin, BookOpen, Eye, Power, Pencil } from "lucide-react";
+import { Search, Users, Mail, Phone, MapPin, BookOpen, Eye, Power, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const subjectOptions = [
@@ -77,6 +77,13 @@ const AdminTutors = () => {
     is_available: true,
   });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addingTutor, setAddingTutor] = useState({
+    email: "",
+    full_name: "",
+    phone: "",
+  });
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     loadTutors();
@@ -201,6 +208,51 @@ const AdminTutors = () => {
     setEditOpen(true);
   };
 
+  const handleAddTutor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdding(true);
+
+    try {
+      const tempPassword = Math.random().toString(36).slice(-8);
+      
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: addingTutor.email,
+        password: tempPassword,
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("User creation failed");
+
+      await supabase.from("profiles").insert({
+        id: authData.user.id,
+        full_name: addingTutor.full_name,
+        email: addingTutor.email,
+        phone: addingTutor.phone,
+      });
+
+      await supabase.from("user_roles").insert({
+        user_id: authData.user.id,
+        role: "tutor",
+      });
+
+      await supabase.from("tutor_details").insert({
+        tutor_id: authData.user.id,
+        subjects: [],
+        is_available: true,
+      });
+
+      toast.success("Tutor berhasil ditambahkan! Password: " + tempPassword);
+      setAddOpen(false);
+      setAddingTutor({ email: "", full_name: "", phone: "" });
+      loadTutors();
+    } catch (error: any) {
+      console.error("Error adding tutor:", error);
+      toast.error(error.message || "Gagal menambahkan tutor");
+    } finally {
+      setAdding(false);
+    }
+  };
+
   const handleEditTutor = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingEdit(true);
@@ -304,8 +356,16 @@ const AdminTutors = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl lg:text-3xl font-bold">Semua Tutor</h1>
-        <p className="text-muted-foreground">Kelola data tutor</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold">Semua Tutor</h1>
+            <p className="text-muted-foreground">Kelola data tutor</p>
+          </div>
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Tutor
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -653,6 +713,59 @@ const AdminTutors = () => {
               </Button>
               <Button type="submit" disabled={savingEdit}>
                 {savingEdit ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Tutor Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Tutor Baru</DialogTitle>
+            <DialogDescription>
+              Daftar tutor baru secara offline. Akun akan dibuatkan otomatis.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddTutor} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="addEmail">Email</Label>
+              <Input
+                id="addEmail"
+                type="email"
+                value={addingTutor.email}
+                onChange={(e) => setAddingTutor({ ...addingTutor, email: e.target.value })}
+                placeholder="tutor@email.com"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="addName">Nama Lengkap</Label>
+              <Input
+                id="addName"
+                value={addingTutor.full_name}
+                onChange={(e) => setAddingTutor({ ...addingTutor, full_name: e.target.value })}
+                placeholder="Nama lengkap tutor"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="addPhone">Nomor HP</Label>
+              <Input
+                id="addPhone"
+                value={addingTutor.phone}
+                onChange={(e) => setAddingTutor({ ...addingTutor, phone: e.target.value })}
+                placeholder="0812..."
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={adding}>
+                {adding ? "Menambahkan..." : "Tambah Tutor"}
               </Button>
             </DialogFooter>
           </form>

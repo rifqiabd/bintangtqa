@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, User, Mail, Phone, MapPin, BookOpen, Eye, GraduationCap, Pencil } from "lucide-react";
+import { Search, User, Mail, Phone, MapPin, BookOpen, Eye, GraduationCap, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface Student {
@@ -57,6 +57,13 @@ const AdminStudents = () => {
     longitude: null as number | null,
   });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addingStudent, setAddingStudent] = useState({
+    email: "",
+    full_name: "",
+    phone: "",
+  });
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     loadStudents();
@@ -114,6 +121,45 @@ const AdminStudents = () => {
     });
     setSelectedStudent(student);
     setEditOpen(true);
+  };
+
+  const handleAddStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdding(true);
+
+    try {
+      const tempPassword = Math.random().toString(36).slice(-8);
+      
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: addingStudent.email,
+        password: tempPassword,
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("User creation failed");
+
+      await supabase.from("profiles").insert({
+        id: authData.user.id,
+        full_name: addingStudent.full_name,
+        email: addingStudent.email,
+        phone: addingStudent.phone,
+      });
+
+      await supabase.from("user_roles").insert({
+        user_id: authData.user.id,
+        role: "student",
+      });
+
+      toast.success("Siswa berhasil ditambahkan! Password: " + tempPassword);
+      setAddOpen(false);
+      setAddingStudent({ email: "", full_name: "", phone: "" });
+      loadStudents();
+    } catch (error: any) {
+      console.error("Error adding student:", error);
+      toast.error(error.message || "Gagal menambahkan siswa");
+    } finally {
+      setAdding(false);
+    }
   };
 
   const handleEditStudent = async (e: React.FormEvent) => {
@@ -210,8 +256,16 @@ const AdminStudents = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl lg:text-3xl font-bold">Semua Siswa</h1>
-        <p className="text-muted-foreground">Kelola data siswa</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold">Semua Siswa</h1>
+            <p className="text-muted-foreground">Kelola data siswa</p>
+          </div>
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Siswa
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -469,6 +523,59 @@ const AdminStudents = () => {
               </Button>
               <Button type="submit" disabled={savingEdit}>
                 {savingEdit ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Student Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Siswa Baru</DialogTitle>
+            <DialogDescription>
+              Daftar siswa baru secara offline. Akun akan dibuatkan otomatis.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddStudent} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="addEmail">Email</Label>
+              <Input
+                id="addEmail"
+                type="email"
+                value={addingStudent.email}
+                onChange={(e) => setAddingStudent({ ...addingStudent, email: e.target.value })}
+                placeholder="siswa@email.com"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="addName">Nama Lengkap</Label>
+              <Input
+                id="addName"
+                value={addingStudent.full_name}
+                onChange={(e) => setAddingStudent({ ...addingStudent, full_name: e.target.value })}
+                placeholder="Nama lengkap siswa"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="addPhone">Nomor HP</Label>
+              <Input
+                id="addPhone"
+                value={addingStudent.phone}
+                onChange={(e) => setAddingStudent({ ...addingStudent, phone: e.target.value })}
+                placeholder="0812..."
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={adding}>
+                {adding ? "Menambahkan..." : "Tambah Siswa"}
               </Button>
             </DialogFooter>
           </form>

@@ -57,7 +57,7 @@ const AdminAttendance = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTutor, setFilterTutor] = useState("all");
-  const [filterDate, setFilterDate] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
   const [tutors, setTutors] = useState<{ id: string; full_name: string }[]>([]);
   const [viewMode, setViewMode] = useState<"table" | "chart">("table");
 
@@ -110,7 +110,8 @@ const AdminAttendance = () => {
             full_name
           )
         `)
-        .order("check_in_time", { ascending: false });
+        .order("check_in_time", { ascending: false })
+        .limit(5000);
 
       if (error) throw error;
 
@@ -143,8 +144,8 @@ const AdminAttendance = () => {
       filterTutor === "all" || record.tutor_id === filterTutor;
 
     const matchesDate =
-      !filterDate ||
-      record.check_in_time.split("T")[0] === filterDate;
+      !filterMonth ||
+      record.check_in_time.startsWith(filterMonth);
 
     return matchesSearch && matchesTutor && matchesDate;
   });
@@ -346,9 +347,9 @@ const AdminAttendance = () => {
                 </SelectContent>
               </Select>
               <Input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
+                type="month"
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
                 className="w-full lg:w-40"
               />
               <Button
@@ -357,7 +358,7 @@ const AdminAttendance = () => {
                 onClick={() => {
                   setSearchQuery("");
                   setFilterTutor("all");
-                  setFilterDate("");
+                  setFilterMonth("");
                 }}
               >
                 Reset

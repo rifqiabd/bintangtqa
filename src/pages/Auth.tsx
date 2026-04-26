@@ -25,6 +25,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState("");
+  const [schoolName, setSchoolName] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const [resetEmail, setResetEmail] = useState("");
@@ -229,6 +230,7 @@ const Auth = () => {
           address: validatedData.address,
           latitude: location?.lat,
           longitude: location?.lng,
+          schoolName: role === "student" ? schoolName : undefined,
           subjects: role === "tutor" ? subjects : undefined,
           experience: validatedData.experience,
           ktpLink: role === "tutor" ? ktpLink : undefined,
@@ -384,6 +386,8 @@ const Auth = () => {
                 setAddress={setAddress}
                 location={location}
                 locationError={locationError}
+                schoolName={schoolName}
+                setSchoolName={setSchoolName}
                 subjects={subjects}
                 setSubjects={setSubjects}
                 experience={experience}

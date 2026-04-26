@@ -51,10 +51,13 @@ export function SchoolPicker({ value, onChange, className }: SchoolPickerProps) 
     const fetchSchools = async () => {
       setLoading(true);
       try {
+        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
         const res = await fetch('https://xkupzhwboluapizzstwc.supabase.co/functions/v1/fetch-schools', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+            'apikey': supabaseKey,
           },
           body: JSON.stringify({
             nama: debouncedSearch,

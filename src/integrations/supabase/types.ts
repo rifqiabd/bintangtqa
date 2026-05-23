@@ -80,7 +80,7 @@ export type Database = {
           id: string
           status: string | null
           student_id: string
-          subject: Database["public"]["Enums"]["subject_area"]
+          subject: Database["public"]["Enums"]["subject_area"] | null
           tutor_id: string
         }
         Insert: {
@@ -88,7 +88,7 @@ export type Database = {
           id?: string
           status?: string | null
           student_id: string
-          subject: Database["public"]["Enums"]["subject_area"]
+          subject?: Database["public"]["Enums"]["subject_area"] | null
           tutor_id: string
         }
         Update: {
@@ -96,7 +96,7 @@ export type Database = {
           id?: string
           status?: string | null
           student_id?: string
-          subject?: Database["public"]["Enums"]["subject_area"]
+          subject?: Database["public"]["Enums"]["subject_area"] | null
           tutor_id?: string
         }
         Relationships: [

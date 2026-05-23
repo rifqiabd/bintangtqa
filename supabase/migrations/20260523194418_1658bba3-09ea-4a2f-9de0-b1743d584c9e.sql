@@ -1,0 +1,1 @@
+ALTER TABLE public.enrollments ALTER COLUMN subject DROP NOT NULL;

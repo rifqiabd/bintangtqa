@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -27,7 +27,7 @@ export type Database = {
           notes: string | null
           photo_url: string | null
           student_id: string | null
-          tutor_id: string | null
+          tutor_id: string
         }
         Insert: {
           check_in_latitude?: number | null
@@ -41,7 +41,7 @@ export type Database = {
           notes?: string | null
           photo_url?: string | null
           student_id?: string | null
-          tutor_id?: string | null
+          tutor_id: string
         }
         Update: {
           check_in_latitude?: number | null
@@ -55,7 +55,7 @@ export type Database = {
           notes?: string | null
           photo_url?: string | null
           student_id?: string | null
-          tutor_id?: string | null
+          tutor_id?: string
         }
         Relationships: [
           {
@@ -79,22 +79,25 @@ export type Database = {
           created_at: string | null
           id: string
           status: string | null
-          student_id: string | null
-          tutor_id: string | null
+          student_id: string
+          subject: Database["public"]["Enums"]["subject_area"]
+          tutor_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
           status?: string | null
-          student_id?: string | null
-          tutor_id?: string | null
+          student_id: string
+          subject: Database["public"]["Enums"]["subject_area"]
+          tutor_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
           status?: string | null
-          student_id?: string | null
-          tutor_id?: string | null
+          student_id?: string
+          subject?: Database["public"]["Enums"]["subject_area"]
+          tutor_id?: string
         }
         Relationships: [
           {
@@ -117,175 +120,67 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string | null
-          district_code: string | null
-          email: string | null
-          full_name: string | null
-          grade: string | null
+          email: string
+          full_name: string
           id: string
           latitude: number | null
           longitude: number | null
-          phone: string | null
-          province_code: string | null
-          regency_code: string | null
-          school_name: string | null
+          phone: string
           updated_at: string | null
-          village_code: string | null
         }
         Insert: {
           address?: string | null
           created_at?: string | null
-          district_code?: string | null
-          email?: string | null
-          full_name?: string | null
-          grade?: string | null
+          email: string
+          full_name: string
           id: string
           latitude?: number | null
           longitude?: number | null
-          phone?: string | null
-          province_code?: string | null
-          regency_code?: string | null
-          school_name?: string | null
+          phone: string
           updated_at?: string | null
-          village_code?: string | null
         }
         Update: {
           address?: string | null
           created_at?: string | null
-          district_code?: string | null
-          email?: string | null
-          full_name?: string | null
-          grade?: string | null
+          email?: string
+          full_name?: string
           id?: string
           latitude?: number | null
           longitude?: number | null
-          phone?: string | null
-          province_code?: string | null
-          regency_code?: string | null
-          school_name?: string | null
+          phone?: string
           updated_at?: string | null
-          village_code?: string | null
-        }
-        Relationships: []
-      }
-      subjects: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      tutor_approval_history: {
-        Row: {
-          approved_at: string | null
-          approved_by: string | null
-          created_at: string | null
-          created_data: Json | null
-          id: string
-          notes: string | null
-          tutor_id: string
-        }
-        Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
-          created_at?: string | null
-          created_data?: Json | null
-          id?: string
-          notes?: string | null
-          tutor_id: string
-        }
-        Update: {
-          approved_at?: string | null
-          approved_by?: string | null
-          created_at?: string | null
-          created_data?: Json | null
-          id?: string
-          notes?: string | null
-          tutor_id?: string
         }
         Relationships: []
       }
       tutor_details: {
         Row: {
-          approved_at: string | null
-          approved_by: string | null
-          certificate_links: string[] | null
           created_at: string | null
-          cv_link: string | null
           experience: string | null
-          graduation_year: number | null
           hourly_rate: number | null
           id: string
-          ipk: number | null
-          is_approved: boolean | null
           is_available: boolean | null
-          ktp_link: string | null
-          major: string | null
-          rejection_reason: string | null
-          subjects: string | null
-          tutor_id: string | null
-          university: string | null
+          subjects: Database["public"]["Enums"]["subject_area"][]
+          tutor_id: string
           updated_at: string | null
         }
         Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
-          certificate_links?: string[] | null
           created_at?: string | null
-          cv_link?: string | null
           experience?: string | null
-          graduation_year?: number | null
           hourly_rate?: number | null
           id?: string
-          ipk?: number | null
-          is_approved?: boolean | null
           is_available?: boolean | null
-          ktp_link?: string | null
-          major?: string | null
-          rejection_reason?: string | null
-          subjects?: string | null
-          tutor_id?: string | null
-          university?: string | null
+          subjects?: Database["public"]["Enums"]["subject_area"][]
+          tutor_id: string
           updated_at?: string | null
         }
         Update: {
-          approved_at?: string | null
-          approved_by?: string | null
-          certificate_links?: string[] | null
           created_at?: string | null
-          cv_link?: string | null
           experience?: string | null
-          graduation_year?: number | null
           hourly_rate?: number | null
           id?: string
-          ipk?: number | null
-          is_approved?: boolean | null
           is_available?: boolean | null
-          ktp_link?: string | null
-          major?: string | null
-          rejection_reason?: string | null
-          subjects?: string | null
-          tutor_id?: string | null
-          university?: string | null
+          subjects?: Database["public"]["Enums"]["subject_area"][]
+          tutor_id?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -298,92 +193,35 @@ export type Database = {
           },
         ]
       }
-      tutor_rejection_history: {
-        Row: {
-          created_at: string | null
-          id: string
-          rejected_at: string | null
-          rejection_reason: string
-          resubmitted_at: string | null
-          tutor_id: string
-          updated_data: Json | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          rejected_at?: string | null
-          rejection_reason: string
-          resubmitted_at?: string | null
-          tutor_id: string
-          updated_data?: Json | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          rejected_at?: string | null
-          rejection_reason?: string
-          resubmitted_at?: string | null
-          tutor_id?: string
-          updated_data?: Json | null
-        }
-        Relationships: []
-      }
       user_roles: {
         Row: {
           created_at: string | null
           id: string
-          role: string | null
-          user_id: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
-          role?: string | null
-          user_id?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
-          role?: string | null
-          user_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_roles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      admin_get_all_enrollments: {
-        Args: never
-        Returns: {
-          created_at: string
-          id: string
-          status: string
-          student_id: string
-          tutor_id: string
-        }[]
-      }
-      admin_get_all_tutor_details: {
-        Args: never
-        Returns: {
-          created_at: string
-          experience: string
-          hourly_rate: number
-          id: string
-          is_available: boolean
-          subjects: string
-          tutor_id: string
-          updated_at: string
-        }[]
+      calculate_distance: {
+        Args: { lat1: number; lat2: number; lon1: number; lon2: number }
+        Returns: number
       }
       get_public_tutor_profiles: {
         Args: never
@@ -393,14 +231,36 @@ export type Database = {
           full_name: string
           hourly_rate: number
           id: string
+          is_available: boolean
           latitude: number
           longitude: number
-          subjects: string[]
+          subjects: Database["public"]["Enums"]["subject_area"][]
         }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "tutor" | "student"
+      subject_area:
+        | "matematika"
+        | "fisika"
+        | "kimia"
+        | "biologi"
+        | "bahasa_indonesia"
+        | "bahasa_inggris"
+        | "ekonomi"
+        | "akuntansi"
+        | "sejarah"
+        | "geografi"
+        | "sosiologi"
+        | "pkn"
+      user_role: "admin" | "tutor" | "student"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -527,6 +387,23 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "tutor", "student"],
+      subject_area: [
+        "matematika",
+        "fisika",
+        "kimia",
+        "biologi",
+        "bahasa_indonesia",
+        "bahasa_inggris",
+        "ekonomi",
+        "akuntansi",
+        "sejarah",
+        "geografi",
+        "sosiologi",
+        "pkn",
+      ],
+      user_role: ["admin", "tutor", "student"],
+    },
   },
 } as const

@@ -23,9 +23,7 @@ export const loadTutorProfile = async (): Promise<{
 
   let subjects: string[] = [];
   if (details?.subjects) {
-    try {
-      subjects = JSON.parse(details.subjects);
-    } catch {}
+    subjects = Array.isArray(details.subjects) ? details.subjects as unknown as string[] : [];
   }
 
   return {
@@ -77,7 +75,7 @@ export const updateTutorDetails = async (data: TutorDetailsData): Promise<void> 
       major: data.major || null,
       graduation_year: data.graduation_year ? parseInt(data.graduation_year) : null,
       ipk: data.ipk ? parseFloat(data.ipk) : null,
-    }, {
+    } as any, {
       onConflict: "tutor_id",
     });
 

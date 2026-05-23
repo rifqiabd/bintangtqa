@@ -43,11 +43,11 @@ export const loadTutors = async (): Promise<Tutor[]> => {
     
     if (td?.subjects) {
       try {
-        const parsedSubjects = JSON.parse(td.subjects);
+        const parsedSubjects = JSON.parse(td.subjects as unknown as string);
         // Map subject IDs to names if they are UUIDs
         subjects = parsedSubjects.map((id: string) => subjectMap.get(id) || id);
       } catch {
-        subjects = [];
+        subjects = (td.subjects as unknown as string[]).map((id: string) => subjectMap.get(id) || id);
       }
     }
 
@@ -111,9 +111,9 @@ export const addTutor = async (data: AddingTutor): Promise<string> => {
 
   await supabase.from("tutor_details").insert({
     tutor_id: authData.user.id,
-    subjects: JSON.stringify([]),
+    subjects: [] as any,
     is_available: true,
-  });
+  } as any);
 
   return tempPassword;
 };
@@ -140,7 +140,7 @@ export const editTutor = async (tutorId: string, data: EditingTutor): Promise<vo
       experience: data.experience,
       hourly_rate: data.hourly_rate ? parseFloat(data.hourly_rate) : null,
       is_available: data.is_available,
-    }, {
+    } as any, {
       onConflict: "tutor_id",
     });
 

@@ -78,9 +78,7 @@ export const findTutors = async (
       const td = availableDetails.find((d) => d.tutor_id === p.id);
       let subjects: string[] = [];
       if (td?.subjects) {
-        try {
-          subjects = JSON.parse(td.subjects);
-        } catch {}
+        subjects = Array.isArray(td.subjects) ? td.subjects as unknown as string[] : [];
       }
       return {
         id: p.id,

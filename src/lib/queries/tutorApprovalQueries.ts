@@ -36,13 +36,7 @@ export const loadPendingTutors = async (): Promise<PendingTutor[]> => {
     let subjects: string[] = [];
     
     if (td?.subjects) {
-      try {
-        const parsedSubjects = JSON.parse(td.subjects);
-        // Map IDs to names if they are UUIDs
-        subjects = parsedSubjects.map((id: string) => subjectMap.get(id) || id);
-      } catch {
-        subjects = [];
-      }
+      subjects = (td.subjects as unknown as string[]).map((id: string) => subjectMap.get(id) || id);
     }
     
     return {

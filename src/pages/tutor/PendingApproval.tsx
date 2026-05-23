@@ -102,9 +102,7 @@ const TutorPendingApproval = ({ isEdit = false }: Props) => {
       // Parse subjects
       let subjects: string[] = [];
       if (tutorDetails?.subjects) {
-        try {
-          subjects = JSON.parse(tutorDetails.subjects);
-        } catch { subjects = []; }
+        subjects = (tutorDetails.subjects as unknown as string[]).map((id: string) => subjectMap.get(id) || id);
       }
 
       // Load subjects from DB
@@ -181,7 +179,7 @@ const TutorPendingApproval = ({ isEdit = false }: Props) => {
           certificate_links: formData.certificate_links,
           is_approved: false,
           rejection_reason: null,
-        })
+        } as any)
         .eq("tutor_id", session.user.id);
 
       if (updateError) throw updateError;

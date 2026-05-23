@@ -91,7 +91,7 @@ export const registerUser = async (
   if (role === "tutor" && options?.subjects) {
     const { error: tutorError } = await supabase.from("tutor_details").insert({
       tutor_id: authData.user.id,
-      subjects: JSON.stringify(options.subjects),
+      subjects: options.subjects as any,
       experience: options.experience,
       is_approved: false,
       ktp_link: options.ktpLink || null,
@@ -101,7 +101,7 @@ export const registerUser = async (
       major: options.major || null,
       graduation_year: options.graduationYear || null,
       ipk: options.ipk || null,
-    });
+    } as any);
 
     if (tutorError) throw tutorError;
   }

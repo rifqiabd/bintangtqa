@@ -76,12 +76,10 @@ export const findTutors = async (
     .filter((p) => availableDetails.some((d) => d.tutor_id === p.id))
     .map((p) => {
       const td = availableDetails.find((d) => d.tutor_id === p.id);
-      let subjects: string[] = [];
-      if (td?.subjects) {
-        try {
-          subjects = JSON.parse(td.subjects);
-        } catch {}
-      }
+    let subjects: string[] = [];
+    if (td?.subjects) {
+      subjects = parseSubjects(td.subjects);
+    }
       return {
         id: p.id,
         full_name: p.full_name,

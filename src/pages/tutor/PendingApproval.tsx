@@ -102,7 +102,7 @@ const TutorPendingApproval = ({ isEdit = false }: Props) => {
       // Parse subjects
       let subjects: string[] = [];
       if (tutorDetails?.subjects) {
-        subjects = (tutorDetails.subjects as unknown as string[]).map((id: string) => subjectMap.get(id) || id);
+        subjects = Array.isArray(tutorDetails.subjects) ? (tutorDetails.subjects as unknown as string[]).map((s) => s) : [];
       }
 
       // Load subjects from DB

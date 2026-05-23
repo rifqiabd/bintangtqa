@@ -23,9 +23,7 @@ export const loadTutorProfile = async (): Promise<{
 
   let subjects: string[] = [];
   if (details?.subjects) {
-    try {
-      subjects = JSON.parse(details.subjects);
-    } catch {}
+    subjects = Array.isArray(details.subjects) ? details.subjects as unknown as string[] : [];
   }
 
   return {

@@ -120,67 +120,184 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string | null
+          district_code: string | null
           email: string
           full_name: string
+          grade: string | null
           id: string
           latitude: number | null
           longitude: number | null
           phone: string
+          province_code: string | null
+          regency_code: string | null
+          school_name: string | null
           updated_at: string | null
+          village_code: string | null
         }
         Insert: {
           address?: string | null
           created_at?: string | null
+          district_code?: string | null
           email: string
           full_name: string
+          grade?: string | null
           id: string
           latitude?: number | null
           longitude?: number | null
           phone: string
+          province_code?: string | null
+          regency_code?: string | null
+          school_name?: string | null
           updated_at?: string | null
+          village_code?: string | null
         }
         Update: {
           address?: string | null
           created_at?: string | null
+          district_code?: string | null
           email?: string
           full_name?: string
+          grade?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
           phone?: string
+          province_code?: string | null
+          regency_code?: string | null
+          school_name?: string | null
           updated_at?: string | null
+          village_code?: string | null
         }
         Relationships: []
       }
-      tutor_details: {
+      subjects: {
         Row: {
           created_at: string | null
-          experience: string | null
-          hourly_rate: number | null
           id: string
-          is_available: boolean | null
-          subjects: Database["public"]["Enums"]["subject_area"][]
-          tutor_id: string
+          is_active: boolean | null
+          name: string
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
-          experience?: string | null
-          hourly_rate?: number | null
           id?: string
-          is_available?: boolean | null
-          subjects?: Database["public"]["Enums"]["subject_area"][]
-          tutor_id: string
+          is_active?: boolean | null
+          name: string
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tutor_approval_history: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          created_data: Json | null
+          id: string
+          notes: string | null
+          tutor_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_data?: Json | null
+          id?: string
+          notes?: string | null
+          tutor_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_data?: Json | null
+          id?: string
+          notes?: string | null
+          tutor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_approval_history_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_approval_history_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tutor_details: {
+        Row: {
+          approved_at: string | null
+          certificate_links: string[] | null
+          created_at: string | null
+          cv_link: string | null
+          experience: string | null
+          graduation_year: number | null
+          hourly_rate: number | null
+          id: string
+          ipk: number | null
+          is_approved: boolean | null
+          is_available: boolean | null
+          ktp_link: string | null
+          major: string | null
+          rejection_reason: string | null
+          subjects: Database["public"]["Enums"]["subject_area"][]
+          tutor_id: string
+          university: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          certificate_links?: string[] | null
+          created_at?: string | null
+          cv_link?: string | null
           experience?: string | null
+          graduation_year?: number | null
           hourly_rate?: number | null
           id?: string
+          ipk?: number | null
+          is_approved?: boolean | null
           is_available?: boolean | null
+          ktp_link?: string | null
+          major?: string | null
+          rejection_reason?: string | null
+          subjects?: Database["public"]["Enums"]["subject_area"][]
+          tutor_id: string
+          university?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          certificate_links?: string[] | null
+          created_at?: string | null
+          cv_link?: string | null
+          experience?: string | null
+          graduation_year?: number | null
+          hourly_rate?: number | null
+          id?: string
+          ipk?: number | null
+          is_approved?: boolean | null
+          is_available?: boolean | null
+          ktp_link?: string | null
+          major?: string | null
+          rejection_reason?: string | null
           subjects?: Database["public"]["Enums"]["subject_area"][]
           tutor_id?: string
+          university?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -188,6 +305,44 @@ export type Database = {
             foreignKeyName: "tutor_details_tutor_id_fkey"
             columns: ["tutor_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tutor_rejection_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          rejected_at: string | null
+          rejection_reason: string
+          resubmitted_at: string | null
+          tutor_id: string
+          updated_data: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          rejected_at?: string | null
+          rejection_reason: string
+          resubmitted_at?: string | null
+          tutor_id: string
+          updated_data?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          rejected_at?: string | null
+          rejection_reason?: string
+          resubmitted_at?: string | null
+          tutor_id?: string
+          updated_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_rejection_history_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -219,6 +374,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_all_enrollments: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          status: string
+          student_id: string
+          subject: string
+          tutor_id: string
+        }[]
+      }
+      admin_get_all_tutor_details: {
+        Args: never
+        Returns: {
+          approved_at: string
+          certificate_links: string[]
+          created_at: string
+          cv_link: string
+          experience: string
+          graduation_year: number
+          hourly_rate: number
+          id: string
+          ipk: number
+          is_approved: boolean
+          is_available: boolean
+          ktp_link: string
+          major: string
+          rejection_reason: string
+          subjects: Database["public"]["Enums"]["subject_area"][]
+          tutor_id: string
+          university: string
+          updated_at: string
+        }[]
+      }
       calculate_distance: {
         Args: { lat1: number; lat2: number; lon1: number; lon2: number }
         Returns: number
